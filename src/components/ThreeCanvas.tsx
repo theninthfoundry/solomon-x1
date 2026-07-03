@@ -1518,9 +1518,36 @@ export default function ThreeCanvas({
     godRaysPass.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
     composer.addPass(godRaysPass);
 
+    // Helper to completely prevent NaN bounding sphere calculation issues in Three.js
+    const preventNaNBoundingSphere = (geo: THREE.BufferGeometry, radius: number = 300) => {
+      geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), radius);
+      geo.computeBoundingSphere = function() {
+        if (!this.boundingSphere) {
+          this.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), radius);
+        } else {
+          this.boundingSphere.center.set(0, 0, 0);
+          this.boundingSphere.radius = radius;
+        }
+      };
+      geo.computeBoundingBox = function() {
+        if (!this.boundingBox) {
+          this.boundingBox = new THREE.Box3(
+            new THREE.Vector3(-radius, -radius, -radius),
+            new THREE.Vector3(radius, radius, radius)
+          );
+        } else {
+          this.boundingBox.set(
+            new THREE.Vector3(-radius, -radius, -radius),
+            new THREE.Vector3(radius, radius, radius)
+          );
+        }
+      };
+    };
+
     // ─── PART 4: TWINKLING STARFIELD ──────────────────────
     const STAR_COUNT = 300;
     const starGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(starGeo, 500);
     const starPositions = new Float32Array(STAR_COUNT * 3);
     const starParams = [] as { phase: number; speed: number; amp: number; index: number }[];
 
@@ -1553,6 +1580,7 @@ export default function ThreeCanvas({
     // ─── PART 5: DRIFTING PLASMA PARTICLES ────────────────
     const PARTICLE_COUNT = 150;
     const particleGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(particleGeo, 300);
     const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
     const particleSpeeds = [] as number[];
 
@@ -1564,7 +1592,6 @@ export default function ThreeCanvas({
     }
 
     particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
-    particleGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 300);
     const particleMat = new THREE.PointsMaterial({
       color: 0xc9933a,
       size: 5.5, // Increased size for dreamy out of focus glow
@@ -1580,6 +1607,7 @@ export default function ThreeCanvas({
     // ─── PART 4C: ORBITING EPHEMERAL LIGHT TRAIL PARTICLES ───────────────
     const MAX_TRAIL_PARTICLES = 400;
     const trailGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(trailGeo, 200);
     const trailPositions = new Float32Array(MAX_TRAIL_PARTICLES * 3);
     const trailColors = new Float32Array(MAX_TRAIL_PARTICLES * 3);
     const trailSizes = new Float32Array(MAX_TRAIL_PARTICLES);
@@ -1593,7 +1621,6 @@ export default function ThreeCanvas({
     trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
     trailGeo.setAttribute("color", new THREE.BufferAttribute(trailColors, 3));
     trailGeo.setAttribute("size", new THREE.BufferAttribute(trailSizes, 1));
-    trailGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 200);
 
     const trailMat = new THREE.PointsMaterial({
       size: 1.0,
@@ -1625,6 +1652,7 @@ export default function ThreeCanvas({
     // ─── PART 5B: COGNITIVE ENERGY RING (HIGH-DETAIL SPINNING SPARKLES) ─────
     const SPARKS_COUNT = 450;
     const sparksGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(sparksGeo, 100);
     const sparksPositions = new Float32Array(SPARKS_COUNT * 3);
     const sparksRates = new Float32Array(SPARKS_COUNT);
     const sparksRadii = new Float32Array(SPARKS_COUNT);
@@ -1641,7 +1669,6 @@ export default function ThreeCanvas({
       sparksOffsets[i] = Math.random() * Math.PI * 2;
     }
     sparksGeo.setAttribute("position", new THREE.BufferAttribute(sparksPositions, 3));
-    sparksGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 100);
     const sparksMat = new THREE.PointsMaterial({
       color: 0xcca33a,
       size: 3.5, // Higher point footprint for glowing visual bokeh
@@ -1691,6 +1718,7 @@ export default function ThreeCanvas({
     // Dynamic solar flare corona particles
     const coronaCount = 80;
     const coronaGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(coronaGeo, 20);
     const coronaPositionsInit = new Float32Array(coronaCount * 3);
     const coronaPositionsLive = new Float32Array(coronaCount * 3);
     const coronaSpeeds = new Float32Array(coronaCount);
@@ -1721,7 +1749,6 @@ export default function ThreeCanvas({
     }
     
     coronaGeo.setAttribute('position', new THREE.BufferAttribute(coronaPositionsLive, 3));
-    coronaGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
     const coronaMat = new THREE.PointsMaterial({
       color: 0xffaa00,
       size: 0.85,
@@ -1819,8 +1846,8 @@ export default function ThreeCanvas({
     }
     
     const symbolCloudGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(symbolCloudGeo, 50);
     symbolCloudGeo.setAttribute("position", new THREE.BufferAttribute(symbolPositions, 3));
-    symbolCloudGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 50);
     const symbolCloudMat = new THREE.PointsMaterial({
       color: 0xffe6a0,
       size: 0.85,
@@ -1873,8 +1900,8 @@ export default function ThreeCanvas({
       }
     }
     const lightWebGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(lightWebGeo, 30);
     lightWebGeo.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
-    lightWebGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 30);
     const lightWebMat = new THREE.LineBasicMaterial({
       color: 0x7c4df3,
       transparent: true,
@@ -1931,9 +1958,9 @@ export default function ThreeCanvas({
       waveProgress[i] = i / wavePointsCount;
     }
     const waveGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(waveGeo, 20);
     waveGeo.setAttribute("position", new THREE.BufferAttribute(wavePositions, 3));
     waveGeo.setAttribute("progress", new THREE.BufferAttribute(waveProgress, 1));
-    waveGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
 
     // Glow line material for the vocal analyzer ribbon
     const waveMat = new THREE.ShaderMaterial({
@@ -1955,6 +1982,7 @@ export default function ThreeCanvas({
     // Glowing particle cloud representing the cranial "thought core" (cerebral head shape scan)
     const avatarCloudCount = 380;
     const avatarCloudGeo = new THREE.BufferGeometry();
+    preventNaNBoundingSphere(avatarCloudGeo, 20);
     const avatarCloudPos = new Float32Array(avatarCloudCount * 3);
     const avatarCloudSpeeds = new Float32Array(avatarCloudCount);
     const avatarCloudPhases = new Float32Array(avatarCloudCount);
@@ -1983,7 +2011,6 @@ export default function ThreeCanvas({
     }
     
     avatarCloudGeo.setAttribute("position", new THREE.BufferAttribute(avatarCloudPos, 3));
-    avatarCloudGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
     const avatarCloudMat = new THREE.PointsMaterial({
       color: 0x7c4df3,
       size: 1.8,
@@ -2303,8 +2330,8 @@ export default function ThreeCanvas({
         pPositions[j * 3 + 2] = (Math.random() - 0.5) * (0.2 + spec.index * 0.1);
       }
       const dataRingGeo = new THREE.BufferGeometry();
+      preventNaNBoundingSphere(dataRingGeo, 20);
       dataRingGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
-      dataRingGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
       const dataRingMat = new THREE.PointsMaterial({
         color: spec.accentColor,
         size: customParticleSize,
@@ -2563,9 +2590,9 @@ export default function ThreeCanvas({
         progressArr[i] = i / (linePointsCount - 1);
       }
       const lineGeo = new THREE.BufferGeometry();
+      preventNaNBoundingSphere(lineGeo, 200);
       lineGeo.setAttribute("position", new THREE.BufferAttribute(positionsArr, 3));
       lineGeo.setAttribute("progress", new THREE.BufferAttribute(progressArr, 1));
-      lineGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 200);
 
       const lineMat = new THREE.ShaderMaterial({
         vertexShader: LineVertShader,
