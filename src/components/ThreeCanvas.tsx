@@ -1538,6 +1538,7 @@ export default function ThreeCanvas({
     }
 
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    starGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, -150), 500);
     const starMat = new THREE.PointsMaterial({
       color: 0xffffff,
       size: 1.4,
@@ -1563,6 +1564,7 @@ export default function ThreeCanvas({
     }
 
     particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+    particleGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 300);
     const particleMat = new THREE.PointsMaterial({
       color: 0xc9933a,
       size: 5.5, // Increased size for dreamy out of focus glow
@@ -1591,6 +1593,7 @@ export default function ThreeCanvas({
     trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
     trailGeo.setAttribute("color", new THREE.BufferAttribute(trailColors, 3));
     trailGeo.setAttribute("size", new THREE.BufferAttribute(trailSizes, 1));
+    trailGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 200);
 
     const trailMat = new THREE.PointsMaterial({
       size: 1.0,
@@ -1638,6 +1641,7 @@ export default function ThreeCanvas({
       sparksOffsets[i] = Math.random() * Math.PI * 2;
     }
     sparksGeo.setAttribute("position", new THREE.BufferAttribute(sparksPositions, 3));
+    sparksGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 100);
     const sparksMat = new THREE.PointsMaterial({
       color: 0xcca33a,
       size: 3.5, // Higher point footprint for glowing visual bokeh
@@ -1693,12 +1697,17 @@ export default function ThreeCanvas({
     
     for (let i = 0; i < coronaCount; i++) {
       const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos((Math.random() * 2) - 1);
+      const phiValue = Math.max(-1.0, Math.min(1.0, (Math.random() * 2) - 1));
+      const phi = Math.acos(phiValue);
       const rad = 1.65 + Math.random() * 0.45;
       
-      const x = rad * Math.sin(phi) * Math.cos(theta);
-      const y = rad * Math.sin(phi) * Math.sin(theta);
-      const z = rad * Math.cos(phi);
+      let x = rad * Math.sin(phi) * Math.cos(theta);
+      let y = rad * Math.sin(phi) * Math.sin(theta);
+      let z = rad * Math.cos(phi);
+      
+      if (isNaN(x)) x = 0.0;
+      if (isNaN(y)) y = 0.0;
+      if (isNaN(z)) z = 0.0;
       
       coronaPositionsInit[i * 3] = x;
       coronaPositionsInit[i * 3 + 1] = y;
@@ -1712,6 +1721,7 @@ export default function ThreeCanvas({
     }
     
     coronaGeo.setAttribute('position', new THREE.BufferAttribute(coronaPositionsLive, 3));
+    coronaGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
     const coronaMat = new THREE.PointsMaterial({
       color: 0xffaa00,
       size: 0.85,
@@ -1783,12 +1793,21 @@ export default function ThreeCanvas({
     
     for (let i = 0; i < symbolPointsCount; i++) {
       const radius = 15.0 + Math.random() * 4.2;
-      const phi = Math.acos(-1.0 + Math.random() * 2.0);
+      const phiValue = Math.max(-1.0, Math.min(1.0, -1.0 + Math.random() * 2.0));
+      const phi = Math.acos(phiValue);
       const theta = Math.random() * Math.PI * 2;
       
-      symbolPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-      symbolPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-      symbolPositions[i * 3 + 2] = radius * Math.cos(phi);
+      let sx = radius * Math.sin(phi) * Math.cos(theta);
+      let sy = radius * Math.sin(phi) * Math.sin(theta);
+      let sz = radius * Math.cos(phi);
+      
+      if (isNaN(sx)) sx = 0.0;
+      if (isNaN(sy)) sy = 0.0;
+      if (isNaN(sz)) sz = 0.0;
+      
+      symbolPositions[i * 3] = sx;
+      symbolPositions[i * 3 + 1] = sy;
+      symbolPositions[i * 3 + 2] = sz;
       
       symbolMetadata.push({
         radius,
@@ -1801,6 +1820,7 @@ export default function ThreeCanvas({
     
     const symbolCloudGeo = new THREE.BufferGeometry();
     symbolCloudGeo.setAttribute("position", new THREE.BufferAttribute(symbolPositions, 3));
+    symbolCloudGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 50);
     const symbolCloudMat = new THREE.PointsMaterial({
       color: 0xffe6a0,
       size: 0.85,
@@ -1820,14 +1840,19 @@ export default function ThreeCanvas({
     const networkNodesPos = [] as THREE.Vector3[];
     // Evenly spaced points on sphere radius 12.5
     for (let i = 0; i < networkNodeCount; i++) {
-      const phi = Math.acos(-1.0 + (2.0 * i) / networkNodeCount);
+      const phiValue = Math.max(-1.0, Math.min(1.0, -1.0 + (2.0 * i) / networkNodeCount));
+      const phi = Math.acos(phiValue);
       const theta = Math.sqrt(networkNodeCount * Math.PI) * phi;
       const r = 12.5;
-      const p = new THREE.Vector3(
-        r * Math.sin(phi) * Math.cos(theta),
-        r * Math.sin(phi) * Math.sin(theta),
-        r * Math.cos(phi)
-      );
+      let px = r * Math.sin(phi) * Math.cos(theta);
+      let py = r * Math.sin(phi) * Math.sin(theta);
+      let pz = r * Math.cos(phi);
+      
+      if (isNaN(px)) px = 0.0;
+      if (isNaN(py)) py = 0.0;
+      if (isNaN(pz)) pz = 0.0;
+      
+      const p = new THREE.Vector3(px, py, pz);
       networkNodesPos.push(p);
       
       // Node marker
@@ -1849,6 +1874,7 @@ export default function ThreeCanvas({
     }
     const lightWebGeo = new THREE.BufferGeometry();
     lightWebGeo.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
+    lightWebGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 30);
     const lightWebMat = new THREE.LineBasicMaterial({
       color: 0x7c4df3,
       transparent: true,
@@ -1863,13 +1889,18 @@ export default function ThreeCanvas({
     const starGroup = new THREE.Group();
     sigilGroup.add(starGroup);
     for (let i = 0; i < 12; i++) {
-      const phi = Math.acos(-1.0 + (2.0 * i) / 12.0);
+      const phiValue = Math.max(-1.0, Math.min(1.0, -1.0 + (2.0 * i) / 12.0));
+      const phi = Math.acos(phiValue);
       const theta = Math.sqrt(12.0 * Math.PI) * phi;
-      const axialDir = new THREE.Vector3(
-        Math.sin(phi) * Math.cos(theta),
-        Math.sin(phi) * Math.sin(theta),
-        Math.cos(phi)
-      );
+      let ax = Math.sin(phi) * Math.cos(theta);
+      let ay = Math.sin(phi) * Math.sin(theta);
+      let az = Math.cos(phi);
+      
+      if (isNaN(ax)) ax = 0.0;
+      if (isNaN(ay)) ay = 0.0;
+      if (isNaN(az)) az = 1.0;
+      
+      const axialDir = new THREE.Vector3(ax, ay, az);
       const needleGeo = new THREE.ConeGeometry(0.3, 5.0, 4);
       const needleMat = new THREE.MeshPhysicalMaterial({
         color: 0xffaa00,
@@ -1902,6 +1933,7 @@ export default function ThreeCanvas({
     const waveGeo = new THREE.BufferGeometry();
     waveGeo.setAttribute("position", new THREE.BufferAttribute(wavePositions, 3));
     waveGeo.setAttribute("progress", new THREE.BufferAttribute(waveProgress, 1));
+    waveGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
 
     // Glow line material for the vocal analyzer ribbon
     const waveMat = new THREE.ShaderMaterial({
@@ -1929,19 +1961,29 @@ export default function ThreeCanvas({
 
     for (let i = 0; i < avatarCloudCount; i++) {
       const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos((Math.random() * 2) - 1);
+      const phiValue = Math.max(-1.0, Math.min(1.0, (Math.random() * 2) - 1));
+      const phi = Math.acos(phiValue);
       
       // Make it resemble a cerebral head scan structure (elongated vertically, slightly flatter sides)
       const r = 4.2 + Math.random() * 0.9;
-      avatarCloudPos[i * 3] = r * Math.sin(phi) * Math.cos(theta) * 0.88; // X axis slightly thinner
-      avatarCloudPos[i * 3 + 1] = r * Math.cos(phi) * 1.38; // Y axis elongated vertically for head profile
-      avatarCloudPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta) * 0.88; // Z axis
+      let cx = r * Math.sin(phi) * Math.cos(theta) * 0.88; // X axis slightly thinner
+      let cy = r * Math.cos(phi) * 1.38; // Y axis elongated vertically for head profile
+      let cz = r * Math.sin(phi) * Math.sin(theta) * 0.88; // Z axis
+      
+      if (isNaN(cx)) cx = 0.0;
+      if (isNaN(cy)) cy = 0.0;
+      if (isNaN(cz)) cz = 0.0;
+      
+      avatarCloudPos[i * 3] = cx;
+      avatarCloudPos[i * 3 + 1] = cy;
+      avatarCloudPos[i * 3 + 2] = cz;
       
       avatarCloudSpeeds[i] = 0.5 + Math.random() * 1.5;
       avatarCloudPhases[i] = Math.random() * Math.PI * 2;
     }
     
     avatarCloudGeo.setAttribute("position", new THREE.BufferAttribute(avatarCloudPos, 3));
+    avatarCloudGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
     const avatarCloudMat = new THREE.PointsMaterial({
       color: 0x7c4df3,
       size: 1.8,
@@ -2262,6 +2304,7 @@ export default function ThreeCanvas({
       }
       const dataRingGeo = new THREE.BufferGeometry();
       dataRingGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+      dataRingGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 20);
       const dataRingMat = new THREE.PointsMaterial({
         color: spec.accentColor,
         size: customParticleSize,
@@ -2522,6 +2565,7 @@ export default function ThreeCanvas({
       const lineGeo = new THREE.BufferGeometry();
       lineGeo.setAttribute("position", new THREE.BufferAttribute(positionsArr, 3));
       lineGeo.setAttribute("progress", new THREE.BufferAttribute(progressArr, 1));
+      lineGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 200);
 
       const lineMat = new THREE.ShaderMaterial({
         vertexShader: LineVertShader,
