@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TelemetryPoint } from "../types";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { ResponsiveContainer, LineChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Activity, Zap, Play, Eye, Flame, ShieldAlert } from "lucide-react";
 
 interface StateTrackerProps {
@@ -25,6 +25,64 @@ export default function StateTracker({
   setBloomEnabled
 }: StateTrackerProps) {
   const [activeSimulationMode, setActiveSimulationMode] = useState<"Quiet" | "HeavyCode" | "Distracted">("Quiet");
+
+  // Interactive visibility state for line trends
+  const [visibleLines, setVisibleLines] = useState({
+    focus: true,
+    load: true,
+    momentum: true,
+    latency: true
+  });
+
+  // User adjustable warning thresholds
+  const [focusThreshold, setFocusThreshold] = useState<number>(75);
+  const [loadThreshold, setLoadThreshold] = useState<number>(60);
+  const [latencyThreshold, setLatencyThreshold] = useState<number>(2500);
+
+  // Custom interactive tooltip with dynamic threshold-triggered alerts
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-950/95 border border-slate-800 rounded-xl p-3 shadow-2xl space-y-1.5 font-mono text-[10px]">
+          <p className="text-slate-400 font-bold border-b border-slate-900 pb-1 mb-1">{label}</p>
+          {payload.map((entry: any) => {
+            const isFocus = entry.dataKey === "focusLevel";
+            const isLoad = entry.dataKey === "cognitiveLoad";
+            const isMomentum = entry.dataKey === "momentum";
+            const isLatency = entry.dataKey === "geminiLatency";
+            
+            const color = entry.color;
+            const labelText = entry.name;
+            const value = entry.value;
+            const suffix = isLatency ? " ms" : "%";
+            
+            let alertMsg = "";
+            if (isFocus && value < focusThreshold) {
+              alertMsg = " ⚠️ Below Target";
+            } else if (isLoad && value > loadThreshold) {
+              alertMsg = " 🚨 Overloaded";
+            } else if (isLatency && value > latencyThreshold) {
+              alertMsg = " ⚡ Latency Spiked";
+            }
+            
+            return (
+              <div key={entry.name} className="flex items-center justify-between gap-4">
+                <span className="flex items-center gap-1.5" style={{ color }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                  {labelText}:
+                </span>
+                <span className="font-bold text-slate-100">
+                  {value}{suffix}
+                  {alertMsg && <span className="text-red-400 font-semibold text-[9px] ml-1">{alertMsg}</span>}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Calculate current averages
   const latestPoint = telemetryData[telemetryData.length - 1] || { focusLevel: 80, cognitiveLoad: 40, momentum: 75 };
@@ -256,36 +314,98 @@ export default function StateTracker({
       <div className="lg:col-span-8 space-y-6 flex flex-col">
         {/* Main Telemetry Chart */}
         <div id="chart-panel" className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-6 border-b border-slate-900 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-3 border-b border-slate-900 pb-3">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-purple-400" />
+              <Zap className="w-4 h-4 text-purple-400 animate-pulse" />
               <span className="text-[11px] font-bold text-slate-300">COGNITIVE MANIFOLD SEQUENCES (30m SLIDING)</span>
             </div>
-            <span className="text-[9px] text-slate-500 font-mono">NODE ACTIVE STATUS: FEED VALIDATED</span>
+            
+            {/* Metric Interactive Legend Switches */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setVisibleLines(prev => ({ ...prev, focus: !prev.focus }))}
+                className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                  visibleLines.focus 
+                    ? "bg-purple-500/15 border-purple-500/35 text-purple-300" 
+                    : "bg-slate-950 border-slate-900 text-slate-500 opacity-60 hover:opacity-100"
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${visibleLines.focus ? "bg-purple-400" : "bg-slate-600"}`} />
+                Focus Depth
+              </button>
+              <button
+                onClick={() => setVisibleLines(prev => ({ ...prev, load: !prev.load }))}
+                className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                  visibleLines.load 
+                    ? "bg-orange-500/15 border-orange-500/35 text-orange-300" 
+                    : "bg-slate-950 border-slate-900 text-slate-500 opacity-60 hover:opacity-100"
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${visibleLines.load ? "bg-orange-400" : "bg-slate-600"}`} />
+                Cognitive Load
+              </button>
+              <button
+                onClick={() => setVisibleLines(prev => ({ ...prev, momentum: !prev.momentum }))}
+                className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                  visibleLines.momentum 
+                    ? "bg-yellow-500/15 border-yellow-500/35 text-yellow-300" 
+                    : "bg-slate-950 border-slate-900 text-slate-500 opacity-60 hover:opacity-100"
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${visibleLines.momentum ? "bg-yellow-400" : "bg-slate-600"}`} />
+                Work Momentum
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Reference Threshold Control Sliders */}
+          <div className="grid grid-cols-2 gap-4 mb-4 bg-slate-950/40 p-3 rounded-xl border border-slate-900 text-[10px] font-sans">
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                  FOCUS MINIMUM TARGET:
+                </span>
+                <span className="text-purple-400 font-mono font-bold">{focusThreshold}%</span>
+              </div>
+              <input 
+                type="range"
+                min="50"
+                max="95"
+                step="5"
+                value={focusThreshold}
+                onChange={(e) => setFocusThreshold(parseInt(e.target.value))}
+                className="w-full h-1 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-purple-500 border-none focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
+                  COGNITIVE OVERLOAD LIMIT:
+                </span>
+                <span className="text-orange-400 font-mono font-bold">{loadThreshold}%</span>
+              </div>
+              <input 
+                type="range"
+                min="40"
+                max="90"
+                step="5"
+                value={loadThreshold}
+                onChange={(e) => setLoadThreshold(parseInt(e.target.value))}
+                className="w-full h-1 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-orange-500 border-none focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Telemetry charts */}
           <div className="flex-1 min-h-[260px] w-full text-xs font-mono">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
+              <LineChart
                 data={telemetryData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                margin={{ top: 15, right: 15, left: -20, bottom: 5 }}
               >
-                <defs>
-                  <linearGradient id="focusGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#c084fc" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#c084fc" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="momentumGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#eab308" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#eab308" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.2} />
                 <XAxis 
                   dataKey="timeString" 
                   stroke="#64748b" 
@@ -296,58 +416,138 @@ export default function StateTracker({
                   tick={{ fontSize: 9 }}
                   domain={[0, 100]}
                 />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "#02010c", 
-                    borderColor: "#1e293b",
-                    borderRadius: "12px",
-                    fontSize: "10px",
-                    color: "#f1f5f9"
-                  }} 
-                />
-                <Legend verticalAlign="top" height={36} iconSize={8} iconType="circle" />
-                <Area
-                  name="Focus Depth"
-                  type="monotone"
-                  dataKey="focusLevel"
-                  stroke="#c084fc"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#focusGrad)"
-                />
-                <Area
-                  name="Cognitive Load"
-                  type="monotone"
-                  dataKey="cognitiveLoad"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#loadGrad)"
-                />
-                <Area
-                  name="Work Momentum"
-                  type="monotone"
-                  dataKey="momentum"
-                  stroke="#eab308"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#momentumGrad)"
-                />
-              </AreaChart>
+                <Tooltip content={<CustomTooltip />} />
+                
+                {/* Reference line for interactive Focus Threshold */}
+                {visibleLines.focus && (
+                  <ReferenceLine 
+                    y={focusThreshold} 
+                    stroke="#c084fc" 
+                    strokeDasharray="4 4" 
+                    strokeWidth={1.5}
+                    label={{ 
+                      value: `Target Focus (${focusThreshold}%)`, 
+                      fill: "#c084fc", 
+                      fontSize: 8, 
+                      position: "insideBottomRight",
+                      offset: 5
+                    }} 
+                  />
+                )}
+
+                {/* Reference line for interactive Cognitive Load threshold */}
+                {visibleLines.load && (
+                  <ReferenceLine 
+                    y={loadThreshold} 
+                    stroke="#f97316" 
+                    strokeDasharray="4 4" 
+                    strokeWidth={1.5}
+                    label={{ 
+                      value: `Overload Cap (${loadThreshold}%)`, 
+                      fill: "#f97316", 
+                      fontSize: 8, 
+                      position: "insideTopRight",
+                      offset: 5
+                    }} 
+                  />
+                )}
+
+                {visibleLines.focus && (
+                  <Line
+                    name="Focus Depth"
+                    type="monotone"
+                    dataKey="focusLevel"
+                    stroke="#c084fc"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, strokeWidth: 1.5, stroke: "#c084fc", fill: "#02010c" }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "#c084fc" }}
+                    animationDuration={400}
+                  />
+                )}
+                {visibleLines.load && (
+                  <Line
+                    name="Cognitive Load"
+                    type="monotone"
+                    dataKey="cognitiveLoad"
+                    stroke="#f97316"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, strokeWidth: 1.5, stroke: "#f97316", fill: "#02010c" }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "#f97316" }}
+                    animationDuration={400}
+                  />
+                )}
+                {visibleLines.momentum && (
+                  <Line
+                    name="Work Momentum"
+                    type="monotone"
+                    dataKey="momentum"
+                    stroke="#eab308"
+                    strokeWidth={2}
+                    dot={{ r: 3, strokeWidth: 1.5, stroke: "#eab308", fill: "#02010c" }}
+                    activeDot={{ r: 5, strokeWidth: 0, fill: "#eab308" }}
+                    animationDuration={400}
+                  />
+                )}
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* System Bottleneck diagnostics overlay chart */}
         <div id="bottleneck-overlay-panel" className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-4 border-b border-slate-900 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-3 border-b border-slate-900 pb-3">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-orange-400" />
+              <Activity className="w-4 h-4 text-orange-400 animate-pulse" />
               <span className="text-[11px] font-bold text-slate-300 uppercase">System Latency Correlation & Cognitive Bottlenecks</span>
             </div>
-            <span className="text-[8px] bg-orange-950/40 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-full font-mono tracking-wider">
-              LAST 60 MIN ANALYSIS
-            </span>
+            
+            {/* Metric Interactive Legend Switches */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setVisibleLines(prev => ({ ...prev, load: !prev.load }))}
+                className={`px-2 py-0.5 rounded-md text-[8px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                  visibleLines.load 
+                    ? "bg-orange-500/15 border-orange-500/35 text-orange-300" 
+                    : "bg-slate-950 border-slate-900 text-slate-500 opacity-60 hover:opacity-100"
+                }`}
+              >
+                <div className={`w-1 h-1 rounded-full ${visibleLines.load ? "bg-orange-400" : "bg-slate-600"}`} />
+                Load Curve
+              </button>
+              <button
+                onClick={() => setVisibleLines(prev => ({ ...prev, latency: !prev.latency }))}
+                className={`px-2 py-0.5 rounded-md text-[8px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                  visibleLines.latency 
+                    ? "bg-purple-500/15 border-purple-500/35 text-purple-300" 
+                    : "bg-slate-950 border-slate-900 text-slate-500 opacity-60 hover:opacity-100"
+                }`}
+              >
+                <div className={`w-1 h-1 rounded-full ${visibleLines.latency ? "bg-purple-400" : "bg-slate-600"}`} />
+                Latency Curve
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Latency Warning Slider */}
+          <div className="grid grid-cols-1 gap-4 mb-4 bg-slate-950/40 p-2.5 rounded-xl border border-slate-900 text-[10px] font-sans">
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                  LATENCY CRITICAL TRIGGER:
+                </span>
+                <span className="text-purple-400 font-mono font-bold">{latencyThreshold} ms</span>
+              </div>
+              <input 
+                type="range"
+                min="1000"
+                max="4000"
+                step="250"
+                value={latencyThreshold}
+                onChange={(e) => setLatencyThreshold(parseInt(e.target.value))}
+                className="w-full h-1 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-purple-500 border-none focus:outline-none"
+              />
+            </div>
           </div>
 
           <p className="text-[11px] text-slate-400 font-sans leading-normal mb-4">
@@ -356,18 +556,8 @@ export default function StateTracker({
 
           <div className="h-[210px] w-full text-xs font-mono">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={telemetryData} margin={{ top: 10, right: -5, left: -25, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="latencyOverlayGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="loadOverlayGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.3} />
+              <LineChart data={telemetryData} margin={{ top: 15, right: 15, left: -25, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.2} />
                 <XAxis dataKey="timeString" stroke="#64748b" tick={{ fontSize: 9 }} />
                 
                 {/* Left Y-Axis for Cognitive Load (%) */}
@@ -387,39 +577,53 @@ export default function StateTracker({
                   domain={[0, 5000]}
                 />
 
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "#02010c", 
-                    borderColor: "#1e293b",
-                    borderRadius: "12px",
-                    fontSize: "10px",
-                    color: "#f1f5f9"
-                  }} 
-                />
-                <Legend verticalAlign="top" height={28} iconSize={8} iconType="circle" />
+                <Tooltip content={<CustomTooltip />} />
                 
-                <Area
-                  yAxisId="left"
-                  name="Cognitive Load (%)"
-                  type="monotone"
-                  dataKey="cognitiveLoad"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#loadOverlayGrad)"
-                />
+                {visibleLines.latency && (
+                  <ReferenceLine 
+                    yAxisId="right" 
+                    y={latencyThreshold} 
+                    stroke="#a855f7" 
+                    strokeDasharray="4 4" 
+                    strokeWidth={1.5}
+                    label={{ 
+                      value: `Alert Trigger (${latencyThreshold}ms)`, 
+                      fill: "#a855f7", 
+                      fontSize: 8, 
+                      position: "insideBottomRight",
+                      offset: 5
+                    }} 
+                  />
+                )}
+
+                {visibleLines.load && (
+                  <Line
+                    yAxisId="left"
+                    name="Cognitive Load"
+                    type="monotone"
+                    dataKey="cognitiveLoad"
+                    stroke="#f97316"
+                    strokeWidth={2}
+                    dot={{ r: 2.5, strokeWidth: 1.5, stroke: "#f97316", fill: "#02010c" }}
+                    activeDot={{ r: 5, strokeWidth: 0, fill: "#f97316" }}
+                    animationDuration={400}
+                  />
+                )}
                 
-                <Area
-                  yAxisId="right"
-                  name="Gemini Latency (ms)"
-                  type="monotone"
-                  dataKey="geminiLatency"
-                  stroke="#a855f7"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#latencyOverlayGrad)"
-                />
-              </AreaChart>
+                {visibleLines.latency && (
+                  <Line
+                    yAxisId="right"
+                    name="Gemini Latency"
+                    type="monotone"
+                    dataKey="geminiLatency"
+                    stroke="#a855f7"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, strokeWidth: 1.5, stroke: "#a855f7", fill: "#02010c" }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "#a855f7" }}
+                    animationDuration={400}
+                  />
+                )}
+              </LineChart>
             </ResponsiveContainer>
           </div>
 
