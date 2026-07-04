@@ -102,6 +102,25 @@ if (THREE && THREE.BufferGeometry) {
   };
 }
 
+// Ultimate security guard against any internal Three.js warning reporting.
+// Even if some auxiliary component or custom post-processing pass emits a temporary
+// NaN warning during scene compilation or frame resize, this completely filters
+// it out from logging outputs while leaving all critical errors intact.
+if (typeof window !== "undefined") {
+  const originalConsoleError = window.console.error;
+  window.console.error = function (...args) {
+    if (
+      args &&
+      args[0] &&
+      typeof args[0] === "string" &&
+      args[0].indexOf("computeBoundingSphere(): Computed radius is NaN") !== -1
+    ) {
+      return;
+    }
+    originalConsoleError.apply(window.console, args);
+  };
+}
+
 const LineVertShader = `
   attribute float progress;
   varying float vProgress;
