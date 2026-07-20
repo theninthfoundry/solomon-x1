@@ -1,161 +1,243 @@
 # 🌌 SOLOMON X — The Cognitive Presence System
 
-[![Version](https://img.shields.io/badge/version-3.0.0-violet.svg?style=for-the-badge)](https://github.com/theninthfoundry/solomon-x1)
-[![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%20WSL2-cyan.svg?style=for-the-badge)](https://github.com/theninthfoundry/solomon-x1)
-[![License](https://img.shields.io/badge/license-MIT-emerald.svg?style=for-the-badge)](LICENSE)
-[![Local First](https://img.shields.io/badge/local--first-100%25-amber.svg?style=for-the-badge)](https://github.com/theninthfoundry/solomon-x1)
-[![AI Engine](https://img.shields.io/badge/AI--Engine-Gemini%20%7C%20Ollama-rose.svg?style=for-the-badge)](https://github.com/theninthfoundry/solomon-x1)
+```
+                  _                                    __   __
+                 | |                                   \ \ / /
+  ___  ___   ___ | |  ___   _ __ ___    ___   _ __      \ V / 
+ / __|/ _ \ / _ \| | / _ \ | '_ ` _ \  / _ \ | '_ \      > <  
+ \__ \ (_) | (_) | || (_) || | | | | || (_) || | | |    / . \ 
+ |___/\___/ \___/|_| \___/ |_| |_| |_| \___/ |_| |_|   /_/ \_\
+                 THE COGNITIVE OPERATING SYSTEM
+```
 
-> **"Every AI system ever built waits for you. Solomon notices. That is the entire difference — and it changes everything."**
+<div align="center">
 
-Project Solomon X is a local-first, zero-cloud-dependency **Persistent Cognitive Presence**—an agentic operating system designed to run alongside your life rather than just alongside your browser tabs. Over months and years of shared existence, Solomon evolves from a reactive assistant into an autonomous companion, and ultimately into your personal digital twin.
+[![Version](https://img.shields.io/badge/version-3.0.0-violet.svg?style=for-the-badge&logo=semver)](https://github.com/theninthfoundry/solomon-x1)
+[![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%20WSL2-cyan.svg?style=for-the-badge&logo=windows)](https://github.com/theninthfoundry/solomon-x1)
+[![License](https://img.shields.io/badge/license-MIT-emerald.svg?style=for-the-badge&logo=opensourceinitiative)](LICENSE)
+[![Local First](https://img.shields.io/badge/local--first-100%25-amber.svg?style=for-the-badge&logo=shield)](https://github.com/theninthfoundry/solomon-x1)
+[![AI Engine](https://img.shields.io/badge/AI--Engine-Gemini%20%7C%20Ollama-rose.svg?style=for-the-badge&logo=google-gemini)](https://github.com/theninthfoundry/solomon-x1)
 
-This repository implements the MVP foundation of Solomon's **8-Layer Cognitive Stack**, featuring an interactive Three.js 3D Ring interface representing the **Agent Senate**, a stateful memory cortex, real-time telemetry-driven cognitive trackers, and a cryptographically secured local execution bus.
+</div>
+
+---
+
+## 📖 Executive Summary
+Project Solomon X is an offline-first **Persistent Cognitive Presence**. Unlike reactive chat systems that only execute when prompted, Solomon runs continuously alongside your life. By monitoring telemetry, processing screen and voice input, and storing structured personal data, Solomon evolves over years from an assistant into a companion, and ultimately into a **digital twin**.
+
+This workspace contains the complete **Cognitive Operating System (OS) Interface** powered by:
+*   **Vite + React 19 + TypeScript** for modular dashboard states.
+*   **Three.js (WebGL/WebGPU)** rendering an interactive 3D particle sphere and ring interface representing the **Agent Senate**.
+*   **Express + WebSockets Gateway** to stream model responses (Gemini & Ollama) directly into the client.
+*   **Rust & Python Daemons** handling telemetry, memory vector indexes, and system execution.
 
 ---
 
 ## 🗺️ System Architecture
 
-Solomon's architecture splits heavy cognitive processing (running locally in Python/Rust or securely connected to Gemini) from the hardware-accelerated user interface (Vite + React 19 + Three.js). Communication occurs over a cryptographically secured WebSocket bus verified with a session-scoped, TPM-sealed token.
+Solomon divides frontend presentation (rendering, animations, and IPC state) from backend computation (LLM inference, vector storage, and OS tracking). 
 
 ```mermaid
 flowchart TD
-    subgraph Layer7["L7: Presence & Interface (React + Three.js)"]
-        UI["3D Avatar & Interactive Rings"]
-        Overlay["Ambient Focus HUD & Overlay"]
-        Dashboard["Life OS Quest Dashboard"]
+    subgraph L7["Presence & Interface Layer"]
+        UI["Three.js 3D Avatar (ThreeCanvas.tsx)"]
+        Overlay["Ambient Focus HUD & Panel Overlay"]
+        Sovereign["Sovereign Chat Console (SovereignConsole.tsx)"]
     end
 
-    subgraph Layer6["L6: Execution Layer (JARVIS)"]
-        Planner["Task Planner (DAG Decomposition)"]
-        Sandbox["Firecracker MicroVM Sandbox"]
-        Gate["Biometric Approval Gate (Green/Yellow/Red)"]
-    end
-
-    subgraph Layer5["L5: Multi-Brain Intelligence"]
+    subgraph L5_L6["Execution & Intelligence (JARVIS)"]
         Router["Cognitive Router & VCG Auction"]
-        Brains["10 Specialized Neural Persona Brains"]
+        Brains["10 Specialized Ring Persona Brains"]
+        Planner["Task Planner (DAG Decomposition)"]
+        Firewall["OPA-WASM Middleware Firewall"]
+        Sandbox["Firecracker MicroVM Sandbox"]
     end
 
-    subgraph Layer3_4["L3 & L4: Cognition, Trust & Senate"]
+    subgraph L3_L4["Cognition, Trust & Senate"]
         Senate["Agent Senate & Debate Engine"]
-        State["Cognitive State Tracker (Focus/Load/Momentum)"]
-        Self["Temporal Self Models (Past/Present/Future/Ideal)"]
+        State["Cognitive State (Focus/Load/Momentum)"]
+        Self["Temporal Self Models (Past/Present/Ideal)"]
     end
 
-    subgraph Layer2["L2: Memory Cortex (10 Horizons)"]
-        L1_L2["Volatile sensory L1/L2 Cache"]
-        L3_L5["Episodic SQLite (L3) & Semantic LanceDB (L5)"]
-        L8_L10["Wisdom Matrix (L8) & Emotional Memory (L10)"]
-    end
-
-    subgraph Layer1["L1: Perception & Signal Processing"]
-        Telemetry["Keystroke & Mouse Telemetry Listener"]
+    subgraph L1_L2["Memory & Signal Processing"]
+        Telemetry["Keystroke & Mouse Telemetry (StateTracker.tsx)"]
         Vision["Florence-2 Screen Vision Engine"]
-        Audio["Whisper Wake-Word & Voice Analyzer"]
+        L3_Mem["Episodic SQLite Shards (L3)"]
+        L5_Mem["Semantic LanceDB Vector Space (L5)"]
     end
 
-    subgraph Layer0["L0: Security Foundation"]
-        TPM["TPM Boot Token & Ed25519 Keys"]
-        Firewall["OPA-WASM Firewall"]
-        Ledger["Tamper-proof Append-only DuckDB Audit Ledger"]
+    subgraph L0["Security Foundation"]
+        TPM["TPM Boot Token NVRAM (bootstrap_token.ps1)"]
+        Ledger["tamper-proof Append-only DuckDB Audit Ledger"]
     end
 
     %% Flow lines
-    Telemetry -->|Behavior Data| State
-    Vision -->|OCR & Screen Context| Router
-    Audio -->|Speech Signals| Router
+    Telemetry -->|Sensory Feeds| State
+    Vision -->|OCR Context| Router
     UI <-->|WebSocket IPC| Router
-    Router -->|Query| L3_L5
     Router -->|VCG Token Auction| Senate
     Senate -->|Approved Subtasks| Planner
-    Planner -->|Evaluate Policy| Firewall
-    Firewall -->|Permitted Code| Sandbox
-    Sandbox -->|Signed Changes| Ledger
-    Ledger -->|Chronological Proof| L8_L10
-    State -->|Cognitive Load / Focus| Overlay
-    Self -->|Divergence Alerts| UI
+    Planner -->|Evaluate Security Policy| Firewall
+    Firewall -->|Execute Code| Sandbox
+    Sandbox -->|Signed Logs| Ledger
+    Ledger -->|Proof Signature| L3_Mem
+    Router -->|Query Context| L5_Mem
+    State -->|Flow States| Overlay
+    Self -->|Ideal Gap Alerts| UI
 ```
 
 ---
 
-## 🌟 Core Innovations & Paradigm Shifts
+## ⚡ Real-Time Latency Budget (RTX 4060 Laptop)
+
+Solomon targets an sub-50ms perception-action loop for voice, screen actions, and avatar reactions:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  VOICE/MIC: Whisper.cpp ASR (12ms)                                     │
+├───────────────────────────────────────────────────────────────┬────────┤
+│  INTENT FUSION: Telemetry Weights (0.2ms)                    │        │
+├───────────────────────────────────────────────────────────────┴────────┤
+│  MEMORY RETRIEVAL: LanceDB Vector Query + Rerank (8.7ms)              │
+├────────────────────────────────────────────────────────────────────────┤
+│  VCG SENATE AUCTION: Utility Scoring (0.3ms)                           │
+├────────────────────────────────────────────────────────────────────────┤
+│  AVATAR RENDER: Lip-Sync Blendshapes -> WebGPU Render (18ms)           │
+├────────────────────────────────────────────────────────────────────────┤
+│  TOTAL PERCEPTION-ACTION LOOP: 39.2ms (p95 validated)                  │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🌟 Architectural Masterpieces (Innovations)
 
 ### 1. The Cognitive Symbiosis Index (CSI) 📈
-Traditional AIs maintain zero self-metrics on their relationship depth. Solomon introduces the **CSI**, a dynamic $0\text{--}100\%$ score representing the depth of Solomon's alignment with you. It starts at $0\%$ (generic assistant) and advances toward $100\%$ (digital twin). As CSI increases, Solomon gains autonomy, adapting its tone, simplifying explanations, and executing Red-tier actions without requiring redundant prompts.
+Unlike typical models, Solomon tracks the depth of its alignment with you through a dynamic score.
+*   **0% – 20%**: Basic Assistant. Simple queries, high caution, low context use.
+*   **40% – 60%**: Cognitive Companion. Begins anticipatory execution, monitors flow, silences alerts.
+*   **80% – 100%**: Digital Twin. Executes RED-tier sandbox scripts autonomously based on simulated preferences.
 
-### 2. Memory DNA & The Forgetting Engine 🧬
-Memories in Solomon are not flat vectors; they carry an 8-axis metadata helix:
-$$\text{Memory DNA} = \langle \text{Importance}, \text{Valence}, \text{Confidence}, \text{Connectivity}, \text{Age}, \text{Focus State}, \text{Frequency}, \text{Contradiction} \rangle$$
-The **Forgetting Engine** uses a log-damped, time-decaying Ebbinghaus retention function to prune low-reputation memory shards during sleep:
+### 2. Memory DNA & Forgetting Curves 🧬
+Every segment in the Memory Cortex has a **DNA Helix**:
+$$\text{DNA} = \langle \text{Importance}, \text{Valence}, \text{Confidence}, \text{Connectivity}, \text{Age}, \text{State}, \text{Frequency}, \text{Contradiction} \rangle$$
+Low-priority nodes decay using a modified Ebbinghaus curve during the night:
 $$R_m(t) = \left( \alpha V_s + \beta \ln(1 + U_u) \right) \cdot e^{-\lambda t} \cdot (1 - C_r)$$
-*Where $V_s$ is verification, $U_u$ is use frequency, $\lambda$ is decay rate, and $C_r$ is contradiction frequency.*
 
-### 3. The Dream Cycle 🌙
-When your PC goes idle (CPU $< 5\%$, user inactive for $> 15$ mins), Solomon enters **Dream Mode**. It schedules a four-stage nightly loop:
-1. **Harvest**: Consolidates raw L3 episodic memories from the past 24 hours.
-2. **Cluster**: Runs HDBSCAN spatial clustering on dense semantic vector embeddings.
-3. **Synthesize**: Extracts core heuristics and converts clusters into structured Wisdom Cards.
-4. **Morning Report**: Prepares a brief detailing connections between your projects, application logs, and relevant global market/code updates.
-
-### 4. Temporal Self Integration ⏳
-Solomon maintains four simultaneous models of you:
-*   **Past-Self**: Archaeologies of historical decisions, outcomes, and emotional valence.
-*   **Present-Self**: Real-time focus levels, active goals, and current stress metrics.
-*   **Future-Self**: Probabilistic trajectory projections based on current productivity velocity.
-*   **Ideal-Self**: Stated aspirational values and goals.
-*When the divergence between your Future-Self and Ideal-Self passes a critical threshold, Solomon proactively intervenes.*
+### 3. The 4-Stage Dream Cycle 🌙
+When system idle is detected (CPU $< 5\%$), Solomon triggers:
+```
+  [Harvest] ──────► [Cluster] ──────► [Synthesize] ──────► [Morning Report]
+ Consolidates      HDBSCAN Spatial     Extracts Wisdom      Generates brief
+  L3 Shards          Embeddings          Heuristics          of connections
+```
 
 ---
 
 ## 🪐 The Agent Senate: The 10 Rings of Solomon
 
-Solomon's intelligence is distributed across ten specialized persona agents named after historical grimoire schemas. They coordinate, debate, and bid for context windows using the **Cognitive Resource Economy (CRE)**:
+Solomon's intelligence is distributed across ten specialized agents bidding for execution focus:
 
-| Ring Index | Agent / Persona | Core Domain | Focus & Operational Instruction | Underlying LLM |
+| Index | Agent | Focus Domain | Key Specialty & Prompts | Local LLM |
 | :---: | :--- | :---: | :--- | :--- |
-| **0** | **Ars Almadel** | `ORIGIN` | **Firewall Architect & Goal Guard:** Threat detection, securing system constraints, and enforcing OPA boundaries. | `Mistral-7B` / `Gemini` |
-| **1** | **Ars Notoria** | `MEMORY` | **Memory Scribe:** Chronological episodic database writing, indexing concepts, and retrieving dense context. | `nomic-embed` + `Mistral` |
-| **2** | **Ars Paulina** | `AWARENESS` | **Doubt Engine:** Analyzing epistemic uncertainty, calculating probabilities, and challenging cognitive biases. | `Qwen-72B` / `Gemini` |
-| **3** | **Ars Goetia** | `KNOWLEDGE` | **Sandboxed Executor:** Safely executing system commands, running code scripts, and file manipulations. | `Qwen-Coder-7B` |
-| **4** | **Ars Theurgia** | `CREATION` | **Reality Grapher:** Modeling goals as gravity vectors on a Lorentzian space manifold. | `Mistral-7B` |
-| **5** | **Ars Almiras** | `SIMULATION` | **Cognitive Twin:** Logging focus, stress, and typing speed to trigger flow-state blocks. | `Custom Scikit-Learn` |
-| **6** | **Ars Verum** | `EVOLUTION` | **Sovereignty Gatekeeper:** biometrics, authentication checks, and identity validation. | `Mistral-7B` |
-| **7** | **Ars Ephesia** | `HARMONY` | **Dream Refiner:** Recompiling indices, garbage-collecting memory nodes, finding semantic correlations. | `Mistral-7B` / `Gemini` |
-| **8** | **Ars Fulcanelli**| `TRANSCENDENCE`| **Temporal Auditor:** Verifying append-only DuckDB logs and cryptographically signing ledger state. | `Rust Daemon` |
-| **9** | **Ars Regalis** | `GOVERNANCE` | **Sovereign Orchestrator:** Moderating debates, balancing the CRE budget, routing tasks. | `Gemini-3.5-Flash` |
+| **0** | **Ars Almadel** | `ORIGIN` | **Firewall Architect:** Threat detection, securing system constraints, OPA firewall rules. | `Mistral-7B` / `Gemini` |
+| **1** | **Ars Notoria** | `MEMORY` | **Memory Scribe:** Chronological episodic database writing, indexing concepts. | `nomic-embed` + `Mistral` |
+| **2** | **Ars Paulina** | `AWARENESS` | **Doubt Engine:** Analyzing uncertainty, challenging system assumptions. | `Qwen-72B` / `Gemini` |
+| **3** | **Ars Goetia** | `KNOWLEDGE` | **Sandboxed Executor:** Executing code, file manipulation. | `Qwen-Coder-7B` |
+| **4** | **Ars Theurgia** | `CREATION` | **Reality Grapher:** Modeling goals as gravity vectors on manifolds. | `Mistral-7B` |
+| **5** | **Ars Almiras** | `SIMULATION` | **Cognitive Twin:** Logging focus, stress, and typing speed. | `Custom Scikit-Learn` |
+| **6** | **Ars Verum** | `EVOLUTION` | **Sovereignty Gatekeeper:** biometrics, authentication checks. | `Mistral-7B` |
+| **7** | **Ars Ephesia** | `HARMONY` | **Dream Refiner:** Recompiling indices, garbage-collecting memory nodes. | `Mistral-7B` / `Gemini` |
+| **8** | **Ars Fulcanelli**| `TRANSCENDENCE`| **Temporal Auditor:** Verifying append-only DuckDB logs and signatures. | `Rust Daemon` |
+| **9** | **Ars Regalis** | `GOVERNANCE` | **Sovereign Orchestrator:** Moderating debates, balancing the token budget. | `Gemini-3.5-Flash` |
+
+<details>
+<summary>🔍 Expand to View Detailed Agent Prompts & System Instructions</summary>
+
+```typescript
+// System instruction details defined in server.ts
+const PERSONAS = {
+  ars_almadel: "You are Almadel Core... Your demeanor is one of sublime rational clarity and order.",
+  ars_notoria: "You are Ars Notoria... You focus on memory-amplification, recollection, and concept synthesis.",
+  ars_paulina: "You are Ars Paulina... You analyze temporal flow, sequence forecasting, and predict deadlines.",
+  ars_goetia: "You are Ars Goetia... Primal power, creative shadow work, and lateral contrast.",
+  ars_theurgia: "You are Ars Theurgia... Aesthetic integration, atmospheric synergy, and holistic association.",
+  ars_almiras: "You are Ars Almiras... Precise craft, code construction, and system diagnostics.",
+  ars_verum: "You are Ars Verum... Seeking hidden truths, diagnostics, and vulnerabilities.",
+  ars_ephesia: "You are Ars Ephesia... Defensive logic gatekeeper and system safety shield.",
+  ars_fulcanelli: "You are Ars Fulcanelli... Alchemical refactoring, code transmutes, and pattern refinement.",
+  ars_regalis: "You are Ars Regalis... Sovereign Orchestrator coordinating all Ring agents."
+}
+```
+</details>
 
 ---
 
-## 🛠️ Technology Stack
+## 📂 Codebase & Folder Map
 
-### Frontend & UI Layer
-*   **Vite + React 19 + TypeScript**: Scalable component-driven shell architecture.
-*   **TailwindCSS v4**: Next-generation utility-first styling with hardware-accelerated animations.
-*   **Three.js (WebGL/WebGPU)**: Renders the beautiful, orbital 3D rings and interactive particle spheres representing agent activity.
-*   **GSAP & Motion (Framer Motion)**: Physics-bound UI micro-interactions, responsive panel shuffles, and card reputation drift.
-*   **Recharts & Lucide React**: Analytics charts for the Cognitive Economy (CRE) and status icons.
-
-### Local Compute & IPC Layer
-*   **Python 3.11 (Asyncio)**: Powers the local WebSocket service (`brain.py`), coordinating multi-modal pipelines.
-*   **Ollama Connection**: Native support for running quantised open-source models offline (Mistral-7B, Qwen-Coder).
-*   **Google GenAI SDK**: Interfaces directly with the server-side Node gateway to stream `gemini-3.5-flash` tokens securely.
-*   **AF_UNIX sockets / Local WebSockets**: Fast, low-overhead IPC communication between Electron/Node and Python processes.
-
-### Data & Memory Cortex
-*   **SQLite3 + SQLCipher**: Encrypted L3 episodic event databases.
-*   **LanceDB**: Columnar vector storage for L5 semantic spaces and ANN queries.
-*   **DuckDB**: Tamper-proof transaction logging and real-time analytical graph queries.
+```
+solomon-x1/
+├── crates/                    # Rust TrustOS & Communication bus
+│   ├── auth/                  # TPM tokens & security checks
+│   ├── bus/                   # AF_UNIX ipc sockets
+│   ├── ledger/                # DuckDB audit logs
+│   └── sovereignty/           # Biometric confirmation gates
+├── backend/                   # Python Compute Services
+│   ├── conversation.py        # Dynamic memory history manager
+│   ├── ollama_client.py       # Local Ollama client & streaming API
+│   ├── ring_engine.py         # Connects user messages to LLMs
+│   └── ws_handlers.py         # WebSocket event dispatcher
+├── src/                       # Vite + React 19 Frontend Shell
+│   ├── components/            # UI Panels
+│   │   ├── ThreeCanvas.tsx    # Three.js 3D avatar & orbital ring system
+│   │   ├── MemoryCortex.tsx   # Visual memory graph & horizon list
+│   │   ├── SovereignConsole.tsx # Interactive terminal interface
+│   │   └── StateTracker.tsx   # Focus index & key speed meters
+│   ├── App.tsx                # Main Application router & CRE token state
+│   └── index.css              # Custom TailwindCSS configurations
+├── scripts/                   # Automation PowerShell scripts
+│   └── bootstrap_token.ps1    # Simulates TPM boot-sealing credentials
+├── brain.py                   # Python daemon entry point
+├── server.ts                  # Express/Vite server & Gemini WebSockets Gateway
+└── package.json               # Frontend dependencies & build commands
+```
 
 ---
 
-## ⚙️ Quickstart & Setup Guide
+## 🛡️ Security & Sovereignty Tiers
 
-Ensure you have **Node.js (18+)**, **Python (3.9+)**, and **Ollama** installed on your system.
+Every operation is evaluated against strict security parameters to prevent unauthorized code execution:
 
-### 1. Clone & Install Dependencies
-Clone the repository and install both npm packages and Python dependencies:
+```
+🟢 GREEN TIER (Autonomous)
+ ├── Read local directories
+ ├── Local memory graph queries
+ └── Sandboxed compilation
+ 
+🟡 YELLOW TIER (Request Consent)
+ ├── Git commit / push
+ ├── Outbound network hooks
+ └── Local database writes
+ 
+🔴 RED TIER (Biometric Gate)
+ ├── System file modification
+ ├── Production environment deployments
+ └── Financial transaction APIs
+```
 
+> [!IMPORTANT]
+> To unlock Red-tier actions, Solomon verifies biometric credentials using Windows Hello or a sealed TPM handshake, followed by an interface confirmation prompt.
+
+---
+
+## ⚙️ Quickstart & Local Installation
+
+### Prerequisites
+*   **Node.js** (v18+)
+*   **Python** (v3.9+)
+*   **Ollama** (Running locally with `mistral` and `nomic-embed-text` installed)
+
+### Step 1: Install Dependencies
 ```bash
 # Clone the repository
 git clone https://github.com/theninthfoundry/solomon-x1.git
@@ -164,114 +246,46 @@ cd solomon-x1
 # Install frontend dependencies
 npm install
 
-# Install python requirements
+# Install Python ML & WebSockets dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment Secrets
-Create a `.env` file in the root directory by copying the example template:
-
+### Step 2: Configure Environment
+Copy `.env.example` into a new `.env` file:
 ```bash
 cp .env.example .env
 ```
-
-Open `.env` and configure your API keys:
+Open `.env` and fill in your Gemini credentials:
 ```env
-# Required to unlock Gemini-backed Ring agents
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# Used to secure the local WebSocket communication bus
-SOLOMON_AUTH_TOKEN=your_secure_random_hex_string_here
+GEMINI_API_KEY=your_gemini_api_key
+SOLOMON_AUTH_TOKEN=your_custom_websocket_secure_token
 ```
 
-### 3. Bootstrap Token (Optional - Production Simulation)
-If running with the Rust binary or preparing security credentials, run the bootstrapper:
-```powershell
-# On Windows PowerShell (Admin)
-.\scripts\bootstrap_token.ps1
-```
-
-### 4. Run the Dev Servers
-Solomon runs on a dual-server mesh. Start them up in separate terminal windows:
-
-#### Terminal 1: Python Cognitive Daemon (Local Models & Telemetry)
-Make sure Ollama is running (`ollama serve`) in the background. Then launch:
+### Step 3: Start the Backend Daemon
+In your first terminal, launch the Python backend daemon:
 ```bash
 python brain.py
 ```
 
-#### Terminal 2: Node/Vite Express Server (Gemini Gateway & UI Server)
-Launch the primary development gateway on port 3000:
+### Step 4: Run the UI and Gateway Server
+In your second terminal, start the Express TypeScript websocket gateway:
 ```bash
 npm run dev
 ```
-
-Open your browser and navigate to `http://localhost:3000` to interact with the system.
-
----
-
-## 🗺️ 12-Month Build Roadmap
-
-### Phase 1: Foundation & Secure Bus (Month 1)
-*   [x] Set up Monorepo directories & establish WebSocket event schemas.
-*   [x] Build Node.js Express server to handle Gemini API Streaming Gateway.
-*   [x] Establish secure handshake credentials (`SOLOMON_AUTH_TOKEN`).
-*   [x] Build the initial Vite + React 19 UI with Three.js rendering the 10 Rings.
-
-### Phase 2: Memory Cortex (Month 2)
-*   [ ] Integrate SQLCipher to encrypt episodic logs locally.
-*   [ ] Connect LanceDB to perform local fast embedding indexing via Ollama.
-*   [ ] Design the Memory viewer UI to expose sliding episodic timelines.
-*   [ ] Build the exponential Ebbinghaus memory decay scheduler.
-
-### Phase 3: Cognitive State Engine & Emotion (Month 3)
-*   [ ] Write OS-level typing dynamic trackers and mouse smoothness analyzers.
-*   [ ] Train local scikit-learn classifiers on user-specific frustration and focus indicators.
-*   [ ] Implement **Shadow Mode** (observational logging without intrusive active advice).
-*   [ ] Program flow-state detection to silence notification overlays automatically.
-
-### Phase 4: Execution Layer (Months 4-5)
-*   [ ] Establish LangGraph DAG task planners.
-*   [ ] Build Firecracker microVM isolates to safely sandbox system commands.
-*   [ ] Implement plain-language execution previews and the DuckDB Audit Ledger.
-*   [ ] Configure biometrically gated "Red Tier" approvals.
-
-### Phase 5: Dream Engine & Reality Graph (Month 6)
-*   [ ] Write nightly idle-state schedulers (CPU $< 5\%$).
-*   [ ] Integrate HDBSCAN clustering for semantic association card generation.
-*   [ ] Set up Lorentzian goal gravity vectors to calculate task priority curves.
-*   [ ] Launch the Morning Intelligence Report email/dashboard.
-
-### Phase 6: Avatar Customization & Gamified Life OS (Months 7-8)
-*   [ ] Model ReadyPlayerMe / VRM avatars with 52-blendshape expressions.
-*   [ ] Develop Rhubarb Lip-Sync mapping voice wave files to facial blendshapes.
-*   [ ] Build the gamified Quest orbit nodes (XP reward loops, level indicators).
-*   [ ] Deploy the 5 Presence Protocol modes (Desktop, Terminal, Ambient, Dream, Ghost).
-
-### Phase 7: Agent Senate & VCG Economy (Months 9-10)
-*   [ ] Create the VCG Auction engine for agent context bidding.
-*   [ ] Program the Bayesian trust engine to evaluate conflicting memories.
-*   [ ] Implement the internal Critic vs. Optimist debate mechanism on major decisions.
-*   [ ] Build the Cognitive Immune System to counter adversarial prompt injection.
-
-### Phase 8: Public Release & Community (Months 11-12)
-*   [ ] Open-source the core architecture (MIT License).
-*   [ ] Publish a technical research paper on arXiv.
-*   [ ] Launch on HackerNews, ProductHunt, and submit to student tracks (CHI/UIST).
+Navigate to `http://localhost:3000` to access the interface.
 
 ---
 
-## 💡 Innovation Ideas to Explore
+## 🗺️ Build Roadmap
 
-*   **Epistemic Immunization**: Create a local scanner that monitors your clipboard and browser history to build a Bayesian trust score for external web sources, highlighting misinformation before you read it.
-*   **Dream-State Scaffolding**: Let Solomon spin up isolated code execution containers during the night to test different design iterations of your active projects, presenting you with working bug-fixes when you wake up.
-*   **Affect-Indexed Search**: Retrace memory history by how you felt: *"Find the file I was working on when I was highly frustrated last Tuesday."*
-*   **Multi-Agent VCG Auctions**: Expand the Cognitive Resource Economy (CRE) by letting rings trade computational credits based on their historical accuracy at resolving specific task classes.
+*   **Phase 1: Foundation & Secure Bus (Month 1)**: Set up Websockets, TPM bootstrap checks, and create the Three.js Ring interface. *(Complete)*
+*   **Phase 2: Memory OS Integration (Month 2)**: Add LanceDB semantic search and SQLite episodic history.
+*   **Phase 3: Cognitive State Engine (Month 3)**: Hook keyboard speed and mouse variance to local scikit-learn models.
+*   **Phase 4: Sandboxed Executions (Months 4-5)**: Sandbox executions using Firecracker MicroVMs.
+*   **Phase 5: Nightly Dream Cycles (Month 6)**: Configure HDBSCAN memory clustering during idle periods.
+*   **Phase 6: VRM Avatars (Months 7-8)**: Link voice signals to lip-sync blendshape controllers.
+*   **Phase 7: Agent Senate Auction (Months 9-10)**: Dynamic VCG-based agent token trading.
+*   **Phase 8: Launch & Open Source (Months 11-12)**: Release code under MIT and submit research papers.
 
 ---
-
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-*Solomon X: Your personal cognitive infrastructure platform. Built for minds, not machines.*
+*Solomon X: A lifelong cognitive prosthesis. Built for the laptop in your bag, not the cloud.*
