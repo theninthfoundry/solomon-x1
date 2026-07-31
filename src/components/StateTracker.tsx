@@ -1,7 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TelemetryPoint } from "../types";
 import { ResponsiveContainer, LineChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { Activity, Zap, Play, Eye, Flame, ShieldAlert } from "lucide-react";
+import { Activity, Zap, Play, Eye, Flame, ShieldAlert, Cpu } from "lucide-react";
+
+const COGNITIVE_AGENTS = [
+  { id: 0, name: "Ars Almadel", role: "Firewall", baseLatency: 800 },
+  { id: 1, name: "Ars Notoria", role: "Memory", baseLatency: 1100 },
+  { id: 2, name: "Ars Paulina", role: "Doubt", baseLatency: 1500 },
+  { id: 3, name: "Ars Goetia", role: "Optimizer", baseLatency: 950 },
+  { id: 4, name: "Ars Theurgia", role: "Atmospheric", baseLatency: 1300 },
+  { id: 5, name: "Ars Almiras", role: "Twin", baseLatency: 1200 },
+  { id: 6, name: "Ars Verum", role: "Gatekeeper", baseLatency: 1400 },
+  { id: 7, name: "Ars Ephesia", role: "Dream", baseLatency: 1750 },
+  { id: 8, name: "Ars Fulcanelli", role: "Auditor", baseLatency: 2100 },
+  { id: 9, name: "Ars Regalis", role: "Senate", baseLatency: 1850 }
+];
 
 interface StateTrackerProps {
   telemetryData: TelemetryPoint[];
@@ -25,6 +38,61 @@ export default function StateTracker({
   setBloomEnabled
 }: StateTrackerProps) {
   const [activeSimulationMode, setActiveSimulationMode] = useState<"Quiet" | "HeavyCode" | "Distracted">("Quiet");
+  
+  // Real-time API Latencies for cognitive agents
+  const [agentLatencies, setAgentLatencies] = useState<Record<number, number>>({
+    0: 840,
+    1: 1150,
+    2: 1420,
+    3: 980,
+    4: 1280,
+    5: 1190,
+    6: 1450,
+    7: 1810,
+    8: 2200,
+    9: 1910
+  });
+
+  const [pingingAgent, setPingingAgent] = useState<number | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAgentLatencies(prev => {
+        const next = { ...prev };
+        COGNITIVE_AGENTS.forEach(agent => {
+          if (pingingAgent === agent.id) return;
+          
+          let multiplier = 1.0;
+          let variance = 150;
+          if (activeSimulationMode === "Quiet") {
+            multiplier = 0.75;
+            variance = 80;
+          } else if (activeSimulationMode === "HeavyCode") {
+            multiplier = 1.6;
+            variance = 400;
+          } else {
+            multiplier = 1.1;
+            variance = 200;
+          }
+          const randomShift = (Math.random() - 0.5) * variance;
+          next[agent.id] = Math.max(250, Math.round(agent.baseLatency * multiplier + randomShift));
+        });
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [activeSimulationMode, pingingAgent]);
+
+  const handleManualPing = (agentId: number) => {
+    setPingingAgent(agentId);
+    setAgentLatencies(prev => ({
+      ...prev,
+      [agentId]: 120 // Simulated quick ping latency
+    }));
+    setTimeout(() => {
+      setPingingAgent(null);
+    }, 1200);
+  };
 
   // Interactive visibility state for line trends
   const [visibleLines, setVisibleLines] = useState({
@@ -490,6 +558,109 @@ export default function StateTracker({
                 )}
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Dynamic Gemini API Latency Heatmap Grid */}
+        <div id="latency-heatmap-panel" className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-900 pb-3">
+            <div className="flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-purple-400 animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Gemini API Latency Heatmap</span>
+                <span className="text-[9px] text-slate-500 font-sans mt-0.5">Real-time model performance diagnostic matrix per agent interface</span>
+              </div>
+            </div>
+            
+            {/* Heatmap Legend */}
+            <div className="flex items-center gap-3 text-[9px] font-sans">
+              <span className="text-slate-500">LEGEND:</span>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-emerald-950 border border-emerald-500/50" />
+                <span className="text-emerald-400">&lt; 1000ms</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-amber-950 border border-amber-500/50" />
+                <span className="text-amber-400">1000ms - 2000ms</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-rose-950 border border-rose-500/50" />
+                <span className="text-rose-400">&gt; 2000ms</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-400 font-sans leading-normal">
+            Every cognitive ring triggers parallel asynchronous streaming context loops. Click on any agent node to execute a manual diagnostic ping sequence and measure localized request propagation.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
+            {COGNITIVE_AGENTS.map((agent) => {
+              const latency = agentLatencies[agent.id] || agent.baseLatency;
+              const isPinging = pingingAgent === agent.id;
+              
+              // Determine status colors based on latency
+              let colorClasses = "bg-emerald-950/25 border-emerald-500/30 text-emerald-400 hover:border-emerald-400";
+              let badgeColor = "bg-emerald-500/10 text-emerald-300";
+              let statusLabel = "OPTIMAL";
+              
+              if (latency >= 2000) {
+                colorClasses = "bg-rose-950/25 border-rose-500/30 text-rose-400 hover:border-rose-400";
+                badgeColor = "bg-rose-500/10 text-rose-300";
+                statusLabel = "CRITICAL";
+              } else if (latency >= 1000) {
+                colorClasses = "bg-amber-950/25 border-amber-500/30 text-amber-400 hover:border-amber-400";
+                badgeColor = "bg-amber-500/10 text-amber-300";
+                statusLabel = "WARNING";
+              }
+
+              if (isPinging) {
+                colorClasses = "bg-purple-950/40 border-purple-500 text-purple-300 animate-pulse scale-[1.02]";
+                badgeColor = "bg-purple-500/20 text-purple-200 animate-bounce";
+                statusLabel = "PINGING";
+              }
+
+              return (
+                <button
+                  type="button"
+                  key={agent.id}
+                  onClick={() => handleManualPing(agent.id)}
+                  className={`p-3 rounded-xl border text-left font-mono transition-all duration-300 flex flex-col justify-between h-[96px] cursor-pointer relative overflow-hidden group select-none ${colorClasses}`}
+                >
+                  {/* Grid overlay for futuristic style */}
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_6px_100%] opacity-15 pointer-events-none group-hover:opacity-25" />
+                  
+                  {/* Subtle shine effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+                  
+                  <div className="space-y-0.5 relative z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold truncate tracking-wider max-w-[80%]">{agent.name}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        isPinging ? "bg-purple-400 animate-ping" :
+                        latency >= 2000 ? "bg-rose-500 animate-pulse" :
+                        latency >= 1000 ? "bg-amber-500" : "bg-emerald-500"
+                      }`} />
+                    </div>
+                    <span className="text-[8px] text-slate-500 uppercase tracking-widest font-sans block">{agent.role}</span>
+                  </div>
+
+                  <div className="flex items-end justify-between pt-1 relative z-10">
+                    <span className="text-xs font-bold font-mono tracking-tighter">
+                      {isPinging ? "Scanning..." : `${latency}ms`}
+                    </span>
+                    <span className={`text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded ${badgeColor}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between text-[8.5px] text-slate-500 font-mono pt-1">
+            <span>Grid state refreshed automatically every 3.0 seconds</span>
+            <span className="text-purple-400/80">Average overall network latency: <span className="font-bold">{Math.round((Object.values(agentLatencies) as number[]).reduce((a, b) => a + b, 0) / 10)}ms</span></span>
           </div>
         </div>
 
