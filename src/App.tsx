@@ -777,6 +777,10 @@ export default function App() {
   const activeAgent = selectedRingIndex !== -1 ? agents[selectedRingIndex] : null;
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Custom reputation decay settings states
+  const [globalReputationThreshold, setGlobalReputationThreshold] = useState<number>(50.0);
+  const [agentReputationThresholds, setAgentReputationThresholds] = useState<Record<number, number>>({});
+
   // Subtle CSS-transition manager using GSAP-based color tweens to smoothly interpolate CSS variables
   const currentTweenColors = useRef({
     primary: "#450a0a",
@@ -869,17 +873,18 @@ export default function App() {
     setAuditLogs([addedLog, ...auditLogs]);
   };
 
-  // Monitor agents for critical reputation drops (< 50.0) to trigger toast notifications
+  // Monitor agents for critical reputation drops (custom threshold) to trigger toast notifications
   const prevReputationsRef = useRef<Record<number, number>>({});
   useEffect(() => {
     agents.forEach(a => {
       const prevRep = prevReputationsRef.current[a.index];
+      const threshold = agentReputationThresholds[a.index] ?? globalReputationThreshold;
       if (prevRep !== undefined) {
-        // Only trigger when crossing the 50.0 threshold downwards
-        if (prevRep >= 50.0 && a.reputationScore < 50.0) {
+        // Only trigger when crossing the threshold downwards
+        if (prevRep >= threshold && a.reputationScore < threshold) {
           showToastNotification(
-            "Reputation Critical Alert",
-            `Warning: Idle Agent ${a.name} (Ring #${a.index}) reputation has dropped below 50.0% (${a.reputationScore.toFixed(1)}%). Consider a ring rotation to restore cognitive focus!`,
+            "Reputation Threshold Crossed",
+            `Warning: Idle Agent ${a.name} (Ring #${a.index}) reputation has dropped below your custom alert threshold of ${threshold.toFixed(1)}% (current: ${a.reputationScore.toFixed(1)}%). Consider a ring rotation to restore cognitive focus!`,
             "warning",
             a.index
           );
@@ -887,7 +892,7 @@ export default function App() {
       }
       prevReputationsRef.current[a.index] = a.reputationScore;
     });
-  }, [agents]);
+  }, [agents, globalReputationThreshold, agentReputationThresholds]);
 
   // Idle Reputation Decay mechanic and active agent validation reward
   useEffect(() => {
@@ -2795,7 +2800,7 @@ export default function App() {
                     </div>
                     <div>
                       <div className="text-[20px] font-bold text-slate-100 font-mono leading-none">
-                        {agents.filter(a => a.reputationScore < 50.0).length}
+                        {agents.filter(a => a.reputationScore < (agentReputationThresholds[a.index] ?? globalReputationThreshold)).length}
                       </div>
                       <div className="text-[9px] text-slate-505 font-mono uppercase tracking-wider mt-1.5Block">
                         Active Stagnation Points
@@ -2833,118 +2838,268 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Alerts List main pane */}
-              <div className="bg-slate-900/10 border border-slate-900 rounded-2xl p-6">
-                <div className="text-[10px] text-slate-500 font-mono font-bold uppercase mb-4 tracking-widest flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-purple-500/70" />
-                  Sovereign Alert Logs
+              {/* Split layout: Configuration Settings side-by-side with Sovereign Alert Logs */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* Left Column: Reputation Decay Thresholds Settings Panel */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-6 backdrop-blur-md">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sliders className="w-4.5 h-4.5 text-purple-400" />
+                      <div className="text-[10px] text-slate-300 font-mono font-bold uppercase tracking-widest">
+                        THRESHOLD CONFIGURATION
+                      </div>
+                    </div>
+                    
+                    <p className="text-[11px] text-slate-400 font-mono mb-5 leading-relaxed">
+                      Define custom thresholds for reputation stagnation alerts. When an agent's standing drops below its active warning point, the system dispatches a warning indicator.
+                    </p>
+
+                    {/* Global Settings Section */}
+                    <div className="space-y-4 border-b border-slate-900/60 pb-5 mb-5">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-slate-300 font-bold uppercase tracking-wider">Global Alert Limit</span>
+                        <span className="text-orange-400 font-bold">{globalReputationThreshold.toFixed(0)}%</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="10"
+                          max="90"
+                          step="5"
+                          value={globalReputationThreshold}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setGlobalReputationThreshold(val);
+                            showToastNotification("GLOBAL LIMIT RECONFIGURED", `Global decay limit adjusted to ${val}%. Affects all agents inheriting default rules.`, "info");
+                          }}
+                          className="w-full accent-purple-500 h-1 bg-slate-950 rounded-lg cursor-pointer"
+                        />
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-mono flex justify-between">
+                        <span>Min: 10%</span>
+                        <span>Max: 90%</span>
+                      </div>
+                    </div>
+
+                    {/* Individual overrides section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-wider">Agent-Specific Rules</span>
+                        <button
+                          onClick={() => {
+                            setAgentReputationThresholds({});
+                            setGlobalReputationThreshold(50);
+                            showToastNotification("THRESHOLD PARITY RESTORED", "All active overrides and global configurations flushed back to 50.0%.", "success");
+                          }}
+                          className="text-[9px] text-slate-500 hover:text-slate-300 font-mono flex items-center gap-1 transition-all uppercase"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" />
+                          Clear Overrides
+                        </button>
+                      </div>
+
+                      <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                        {agents.map((ag) => {
+                          const hasOverride = agentReputationThresholds[ag.index] !== undefined;
+                          const currentThreshold = agentReputationThresholds[ag.index] ?? globalReputationThreshold;
+                          const isDecayed = ag.reputationScore < currentThreshold;
+
+                          return (
+                            <div key={ag.index} className="bg-slate-950/40 border border-slate-900/50 rounded-xl p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span 
+                                    className="w-2 h-2 rounded-full shrink-0" 
+                                    style={{ backgroundColor: "#" + ag.bandColor.toString(16) }}
+                                  />
+                                  <span className="text-[11px] font-bold font-mono text-slate-200">{ag.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isDecayed && (
+                                    <span className="text-[8px] bg-red-500/10 border border-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono uppercase animate-pulse">
+                                      Decayed
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    REP: <span className="font-bold text-slate-200">{ag.reputationScore.toFixed(1)}%</span>
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-3 pt-1">
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={hasOverride} 
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setAgentReputationThresholds(prev => ({ ...prev, [ag.index]: 45.0 }));
+                                          showToastNotification("OVERRIDE INITIATED", `Custom warning threshold activated for ${ag.name}.`, "info");
+                                        } else {
+                                          setAgentReputationThresholds(prev => {
+                                            const copy = { ...prev };
+                                            delete copy[ag.index];
+                                            return copy;
+                                          });
+                                          showToastNotification("OVERRIDE INHERITED", `${ag.name} is now governed by the global ${globalReputationThreshold}% limit.`, "info");
+                                        }
+                                      }}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-7 h-4 bg-slate-900 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600 peer-checked:after:bg-white"></div>
+                                  </label>
+                                  <span className="text-[9px] text-slate-500 font-mono uppercase">Override</span>
+                                </div>
+
+                                {hasOverride ? (
+                                  <div className="flex items-center gap-2 w-full justify-end">
+                                    <input
+                                      type="range"
+                                      min="10"
+                                      max="90"
+                                      step="5"
+                                      value={currentThreshold}
+                                      onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        setAgentReputationThresholds(prev => ({ ...prev, [ag.index]: val }));
+                                      }}
+                                      className="w-20 accent-purple-500 h-0.5 bg-slate-900 rounded-lg cursor-pointer"
+                                    />
+                                    <span className="text-[10px] font-bold text-purple-400 font-mono shrink-0 w-8 text-right">
+                                      {currentThreshold}%
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[9px] text-slate-600 font-mono uppercase text-right w-full italic">
+                                    Global ({globalReputationThreshold}%)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {notifications.length === 0 ? (
-                  <div className="p-12 text-center rounded-2xl border border-dashed border-slate-805 bg-slate-950/10 space-y-2">
-                    <Bell className="w-8 h-8 text-slate-700 mx-auto animate-pulse" />
-                    <h3 className="text-xs font-bold text-slate-400">ALERT REGISTRY SECULATED</h3>
-                    <p className="text-[10px] text-slate-500 max-w-sm mx-auto font-mono">
-                      All systems are holding standard parity indexes. No cognitive stagnation flags detected.
-                    </p>
+                {/* Right Column: Alerts List main pane */}
+                <div className="lg:col-span-7 bg-slate-900/10 border border-slate-900 rounded-2xl p-6">
+                  <div className="text-[10px] text-slate-500 font-mono font-bold uppercase mb-4 tracking-widest flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-purple-500/70" />
+                    Sovereign Alert Logs
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {notifications.map(n => {
-                      const associatedAgent = n.agentIndex !== undefined ? agents[n.agentIndex] : null;
-                      return (
-                        <div
-                          key={n.id}
-                          className={`p-4 rounded-xl border transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                            !n.read 
-                              ? "bg-slate-900/65 border-purple-500/25 shadow-md shadow-purple-950/10" 
-                              : "bg-slate-950/20 border-slate-900 text-slate-400 opacity-75"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg shrink-0 border mt-0.5 ${
-                              n.type === 'success' 
-                                ? "bg-emerald-950/40 border-emerald-500/20 text-emerald-400" 
-                                : n.type === 'warning' 
-                                  ? "bg-orange-950/40 border-orange-500/20 text-orange-400" 
-                                  : "bg-purple-950/40 border-purple-500/20 text-purple-300"
-                            }`}>
-                              {n.type === 'success' ? (
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                              ) : n.type === 'warning' ? (
-                                <ShieldAlert className="w-3.5 h-3.5 animate-pulse" />
-                              ) : (
-                                <Bell className="w-3.5 h-3.5" />
+
+                  {notifications.length === 0 ? (
+                    <div className="p-12 text-center rounded-2xl border border-dashed border-slate-805 bg-slate-950/10 space-y-2">
+                      <Bell className="w-8 h-8 text-slate-700 mx-auto animate-pulse" />
+                      <h3 className="text-xs font-bold text-slate-400">ALERT REGISTRY SECULATED</h3>
+                      <p className="text-[10px] text-slate-500 max-w-sm mx-auto font-mono">
+                        All systems are holding standard parity indexes. No cognitive stagnation flags detected.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.map(n => {
+                        const associatedAgent = n.agentIndex !== undefined ? agents[n.agentIndex] : null;
+                        return (
+                          <div
+                            key={n.id}
+                            className={`p-4 rounded-xl border transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                              !n.read 
+                                ? "bg-slate-900/65 border-purple-500/25 shadow-md shadow-purple-950/10" 
+                                : "bg-slate-950/20 border-slate-900 text-slate-400 opacity-75"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-lg shrink-0 border mt-0.5 ${
+                                n.type === 'success' 
+                                  ? "bg-emerald-950/40 border-emerald-500/20 text-emerald-400" 
+                                  : n.type === 'warning' 
+                                    ? "bg-orange-950/40 border-orange-500/20 text-orange-400" 
+                                    : "bg-purple-950/40 border-purple-500/20 text-purple-300"
+                              }`}>
+                                {n.type === 'success' ? (
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                ) : n.type === 'warning' ? (
+                                  <ShieldAlert className="w-3.5 h-3.5 animate-pulse" />
+                                ) : (
+                                  <Bell className="w-3.5 h-3.5" />
+                                )}
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap text-left">
+                                  <span className={`text-xs font-bold ${!n.read ? "text-slate-200" : "text-slate-400"}`}>
+                                    {n.title}
+                                  </span>
+                                  {associatedAgent && (
+                                    <span 
+                                      className="text-[8px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wide border bg-purple-950/30 border-purple-500/30 text-purple-300"
+                                    >
+                                      Agent {associatedAgent.name}
+                                    </span>
+                                  )}
+                                  {!n.read && (
+                                    <span className="text-[7px] bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">
+                                      UNREAD
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-slate-400 leading-relaxed font-mono text-left">
+                                  {n.message}
+                                </p>
+                                <div className="text-[8px] text-slate-500 font-mono text-left">
+                                  UTC TIMESTAMP: {new Date(n.timestamp).toLocaleTimeString()} — {new Date(n.timestamp).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2.5 self-end md:self-center">
+                              {associatedAgent && (
+                                <button
+                                  onClick={() => {
+                                    // Switch active agent focus
+                                    handleSelectRing(associatedAgent.index);
+                                    // Mark as read
+                                    setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+                                    // Re-focus on presence view to see signature live
+                                    setActiveTab('presence');
+                                    showToastNotification(
+                                      "ROTATION SUCCESSFUL", 
+                                      `Neural link focus shifted to ${associatedAgent.name}. Synced memory registers correctly!`, 
+                                      "success"
+                                    );
+                                  }}
+                                  className="h-8 px-3 rounded-lg bg-purple-600/15 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 hover:border-purple-500 text-[10px] font-semibold font-mono tracking-wide transition-all cursor-pointer flex items-center gap-1.5 uppercase"
+                                  title="Instantly shift cognitive senate focus here"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
+                                  Rotate Focus
+                                </button>
+                              )}
+
+                              {!n.read && (
+                                <button
+                                  onClick={() => {
+                                    setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+                                  }}
+                                  className="h-8 px-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-semibold font-mono tracking-wide transition-all cursor-pointer uppercase"
+                                >
+                                  Dismiss
+                                </button>
                               )}
                             </div>
-                            
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap text-left">
-                                <span className={`text-xs font-bold ${!n.read ? "text-slate-200" : "text-slate-400"}`}>
-                                  {n.title}
-                                </span>
-                                {associatedAgent && (
-                                  <span 
-                                    className="text-[8px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wide border bg-purple-950/30 border-purple-500/30 text-purple-300"
-                                  >
-                                    Agent {associatedAgent.name}
-                                  </span>
-                                )}
-                                {!n.read && (
-                                  <span className="text-[7px] bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">
-                                    UNREAD
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-slate-400 leading-relaxed font-mono text-left">
-                                {n.message}
-                              </p>
-                              <div className="text-[8px] text-slate-500 font-mono text-left">
-                                UTC TIMESTAMP: {new Date(n.timestamp).toLocaleTimeString()} — {new Date(n.timestamp).toLocaleDateString()}
-                              </div>
-                            </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                          <div className="flex items-center gap-2.5 self-end md:self-center">
-                            {associatedAgent && (
-                              <button
-                                onClick={() => {
-                                  // Switch active agent focus
-                                  handleSelectRing(associatedAgent.index);
-                                  // Mark as read
-                                  setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
-                                  // Re-focus on presence view to see signature live
-                                  setActiveTab('presence');
-                                  showToastNotification(
-                                    "ROTATION SUCCESSFUL", 
-                                    `Neural link focus shifted to ${associatedAgent.name}. Synced memory registers correctly!`, 
-                                    "success"
-                                  );
-                                }}
-                                className="h-8 px-3 rounded-lg bg-purple-600/15 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 hover:border-purple-500 text-[10px] font-semibold font-mono tracking-wide transition-all cursor-pointer flex items-center gap-1.5 uppercase"
-                                title="Instantly shift cognitive senate focus here"
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                                Rotate Focus
-                              </button>
-                            )}
-
-                            {!n.read && (
-                              <button
-                                onClick={() => {
-                                  setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
-                                }}
-                                className="h-8 px-3 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-semibold font-mono tracking-wide transition-all cursor-pointer uppercase"
-                              >
-                                Dismiss
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             </div>
           )}
