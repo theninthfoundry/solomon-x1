@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 // Initialize Gemini SDK securely (server-side only)
 const apiKey = process.env.GEMINI_API_KEY;
@@ -245,6 +245,48 @@ app.post("/api/tts", async (req, res) => {
   } catch (err: any) {
     console.error("[TTS API Error]", err);
     res.status(500).json({ error: err.message || "Failed to synthesize speech." });
+  }
+});
+
+// 1.8 API: Speech-to-Text Transcription via Gemini 2.5 Flash Multimodal
+app.post("/api/transcribe", async (req, res) => {
+  if (!ai) {
+    return res.status(500).json({
+      error: "GEMINI_API_KEY is not configured in the host environment. Please add it to your Secrets panel."
+    });
+  }
+
+  const { audio, mimeType } = req.body;
+  if (!audio) {
+    return res.status(400).json({ error: "No base64 audio data provided for transcription." });
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                data: audio,
+                mimeType: mimeType || "audio/webm"
+              }
+            },
+            {
+              text: "Please transcribe this spoken audio accurately. Output only the transcription, with no other conversational text, notes, greetings, or explanations. If the audio is silent or there is no speech, reply with an empty string."
+            }
+          ]
+        }
+      ]
+    });
+
+    const transcription = response.text?.trim() || "";
+    res.json({ text: transcription });
+  } catch (err: any) {
+    console.error("[STT API Error]", err);
+    res.status(500).json({ error: err.message || "Failed to transcribe audio." });
   }
 });
 

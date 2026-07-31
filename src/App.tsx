@@ -35,7 +35,10 @@ import {
   RefreshCw,
   Sliders,
   Bell,
-  Trash2
+  Trash2,
+  Loader2,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 
 const INITIAL_AGENTS: AgentSpec[] = [
@@ -215,6 +218,9 @@ export default function App() {
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [sttLoading, setSttLoading] = useState(false);
 
   const VOICE_MAPPING: Record<number, string> = useMemo(() => ({
     0: "Fenrir",  // Ars Almadel (Firewall)
@@ -1580,46 +1586,104 @@ export default function App() {
     return false;
   };
 
-  // Voice Speech Recognition or simulation
-  const handleTriggerSpeech = () => {
-    if (isListeningMic) {
-      setIsListeningMic(false);
-      setMicRipplePulse(false);
-      return;
-    }
-
-    setIsListeningMic(true);
-    setMicRipplePulse(true);
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.lang = "en-US";
-      rec.continuous = false;
-      rec.interimResults = false;
-
-      rec.onresult = (event: any) => {
-        const text = event.results[0][0].transcript;
-        if (text) {
-          handleSendPrompt(undefined, text);
+  // Voice Speech Recording and High-Fidelity STT Translation Core
+  const startRecordingAudio = async () => {
+    audioChunksRef.current = [];
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("UserMedia not supported in this client environment.");
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Determine best audio mime type supported by browser
+      let mimeType = "audio/webm";
+      if (MediaRecorder.isTypeSupported && !MediaRecorder.isTypeSupported("audio/webm")) {
+        if (MediaRecorder.isTypeSupported("audio/ogg")) {
+          mimeType = "audio/ogg";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        } else {
+          mimeType = "";
         }
-        setIsListeningMic(false);
-        setMicRipplePulse(false);
+      }
+
+      const mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
-      rec.onerror = () => {
-        setIsListeningMic(false);
-        setMicRipplePulse(false);
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || "audio/webm" });
+        
+        // Terminate all stream tracks to release device hardware locks cleanly
+        stream.getTracks().forEach(track => track.stop());
+
+        if (audioBlob.size < 400) {
+          console.warn("[STT] Audio capture packet size is too small. Disregarding.");
+          return;
+        }
+
+        setSttLoading(true);
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64data = reader.result as string;
+          const base64String = base64data.split(",")[1];
+          
+          try {
+            showToastNotification("TRANSCRIBING AUDIO", "Secure AI STT engine processing speech stream...", "info");
+            
+            const res = await fetch("/api/transcribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                audio: base64String,
+                mimeType: mimeType || "audio/webm"
+              })
+            });
+
+            if (!res.ok) throw new Error("Transcription pipeline returned error.");
+            const data = await res.json();
+            const text = data.text;
+            
+            if (text && text.trim()) {
+              showToastNotification("SPEECH TRANSCRIBED", `Synthesized: "${text}"`, "success");
+              setChatInput(text);
+              
+              // Automatically extract voice intents (for nav and shortcuts) and dispatch chat message!
+              const matchedIntent = extractVoiceIntent(text);
+              if (!matchedIntent) {
+                handleSendPrompt(undefined, text);
+              }
+            } else {
+              showToastNotification("SILENCE DETECTED", "Audio captured, but no discernible speech was synthesized.", "warning");
+            }
+          } catch (e: any) {
+            console.error("[STT Transcribe Error]", e);
+            showToastNotification("TRANSCRIPTION ERROR", "Failed to resolve speech-to-text with secure Gemini core.", "warning");
+          } finally {
+            setSttLoading(false);
+          }
+        };
       };
 
-      rec.onend = () => {
-        setIsListeningMic(false);
-        setMicRipplePulse(false);
-      };
+      mediaRecorder.start();
+      setIsListeningMic(true);
+      setMicRipplePulse(true);
+      showToastNotification("AUDIO RECORDING ENGAGED", "Hands-free speech active. Speak now and click microphone again to finish.", "success");
+    } catch (err: any) {
+      console.warn("[STT] Microphone hardware capture blocked or unsupported. Emulating speech input pattern.", err);
+      
+      // Fallback: Simulation for sandboxed iframes without mic/permissions
+      setIsListeningMic(true);
+      setMicRipplePulse(true);
+      showToastNotification("SANDBOX SIMULATION", "Mic blocked in sandboxed frame. Simulating randomized cognitive command input.", "info");
 
-      rec.start();
-    } else {
-      // Simulate speech input in sandbox environments if Web Speech API isn't enabled
       setTimeout(() => {
         const phrases = [
           "Switch focus to cognitive resource economy token system",
@@ -1629,10 +1693,32 @@ export default function App() {
           "Switch view to Layer 0 Firewall shielding matrix"
         ];
         const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-        handleSendPrompt(undefined, randomPhrase);
+        setChatInput(randomPhrase);
+        
+        const matchedIntent = extractVoiceIntent(randomPhrase);
+        if (!matchedIntent) {
+          handleSendPrompt(undefined, randomPhrase);
+        }
+        
         setIsListeningMic(false);
         setMicRipplePulse(false);
       }, 2500);
+    }
+  };
+
+  const stopRecordingAudio = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsListeningMic(false);
+    setMicRipplePulse(false);
+  };
+
+  const handleTriggerSpeech = () => {
+    if (isListeningMic) {
+      stopRecordingAudio();
+    } else {
+      startRecordingAudio();
     }
   };
 
@@ -1783,23 +1869,31 @@ export default function App() {
         {/* Global Node Status Trackers */}
         <div id="header-telemetry" className="flex items-center gap-4 text-[10px] font-mono text-slate-400">
           {wsStatus === 'connected' ? (
-            <div className="hidden lg:flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 px-3 h-8 rounded-full animate-fadeIn">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>COGNITIVE LINK: VERIFIED (WS)</span>
+            <div className="hidden lg:flex items-center gap-2 bg-emerald-950/30 border border-emerald-500/30 text-emerald-400 px-3 h-8 rounded-full animate-fadeIn shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-mono tracking-wider">COGNITIVE LINK: VERIFIED</span>
+              <Activity className="w-3 h-3 text-emerald-400/60 animate-pulse ml-0.5" />
             </div>
           ) : wsStatus === 'connecting' ? (
-            <div className="hidden lg:flex items-center gap-1.5 bg-blue-950/40 border border-blue-500/20 text-blue-400 px-3 h-8 rounded-full animate-fadeIn animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              <span className="uppercase">Connecting...</span>
+            <div className="hidden lg:flex items-center gap-2 bg-sky-950/30 border border-sky-500/30 text-sky-400 px-3 h-8 rounded-full animate-fadeIn shadow-[0_0_10px_rgba(14,165,233,0.1)]">
+              <Loader2 className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+              <span className="font-mono tracking-wider uppercase animate-pulse">Securing Socket...</span>
             </div>
           ) : (
             <div 
-              className="hidden lg:flex items-center gap-1.5 bg-red-950/20 border border-red-500/35 text-red-400 px-3 h-8 rounded-full border-dashed animate-fadeIn cursor-pointer hover:bg-red-950/35 transition-all" 
+              className="hidden lg:flex items-center gap-2 bg-rose-950/20 border border-rose-500/30 text-rose-400 px-3 h-8 rounded-full border-dashed animate-fadeIn cursor-pointer hover:bg-rose-950/40 transition-all shadow-[0_0_10px_rgba(244,63,94,0.05)]" 
               onClick={handleManualReconnect}
-              title="Awaiting dynamic local loop web socket on port 8765. Click to force manual link."
+              title="Cognitive link offline. Click to bypass backoff timer and force manual link."
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="uppercase">{wsNextRetrySeconds > 2 ? "Link Failed" : `Reattempting in ${wsNextRetrySeconds}s`}</span>
+              <WifiOff className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+              <span className="font-mono tracking-wider uppercase">
+                {wsNextRetrySeconds > 0 ? `RETRYING IN ${wsNextRetrySeconds}S` : "SEC LINK FAULT"}
+              </span>
+              <Loader2 className="w-2.5 h-2.5 text-rose-400/40 animate-spin ml-0.5" />
             </div>
           )}
           <div className="hidden sm:flex items-center gap-1.5 bg-slate-900/60 border border-slate-800/80 px-3 h-8 rounded-full">
