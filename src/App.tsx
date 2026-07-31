@@ -209,6 +209,108 @@ export default function App() {
   const [isCinematicFading, setIsCinematicFading] = useState(false);
   const [agents, setAgents] = useState<AgentSpec[]>(INITIAL_AGENTS);
   const [voiceMood, setVoiceMood] = useState<'warm' | 'cold' | 'neutral'>('neutral');
+  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(true);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [currentVoiceActor, setCurrentVoiceActor] = useState("Zephyr");
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  const VOICE_MAPPING: Record<number, string> = useMemo(() => ({
+    0: "Fenrir",  // Ars Almadel (Firewall)
+    1: "Charon",  // Ars Notoria (Memory)
+    2: "Puck",    // Ars Paulina (Doubt)
+    3: "Fenrir",  // Ars Goetia (Optimizer)
+    4: "Zephyr",  // Ars Theurgia (Atmospheric)
+    5: "Kore",    // Ars Almiras (Twin)
+    6: "Zephyr",  // Ars Verum (Gatekeeper)
+    7: "Puck",    // Ars Ephesia (Dream)
+    8: "Charon",  // Ars Fulcanelli (Auditor)
+    9: "Zephyr",  // Ars Regalis (Senate)
+  }), []);
+
+  useEffect(() => {
+    const actor = VOICE_MAPPING[selectedRingIndex] || "Zephyr";
+    setCurrentVoiceActor(actor);
+  }, [selectedRingIndex, VOICE_MAPPING]);
+
+  const stopSpeaking = () => {
+    if (currentAudioSourceRef.current) {
+      try {
+        currentAudioSourceRef.current.stop();
+      } catch (e) {}
+      currentAudioSourceRef.current = null;
+    }
+    setIsPlayingAudio(false);
+  };
+
+  const speakText = async (text: string, agentIndex: number) => {
+    if (!voiceOutputEnabled) return;
+    
+    stopSpeaking();
+    setIsPlayingAudio(true);
+
+    try {
+      const voiceName = VOICE_MAPPING[agentIndex] || "Zephyr";
+      
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text.substring(0, 450), // Send reasonable size chunk
+          voiceName
+        })
+      });
+
+      if (!res.ok) throw new Error("TTS API Error");
+
+      const data = await res.json();
+      if (data.audio) {
+        const binaryString = window.atob(data.audio);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const int16Data = new Int16Array(bytes.buffer);
+        
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioContext();
+        }
+        
+        if (audioContextRef.current.state === "suspended") {
+          await audioContextRef.current.resume();
+        }
+
+        const audioBuffer = audioContextRef.current.createBuffer(1, int16Data.length, 24000);
+        const channelData = audioBuffer.getChannelData(0);
+        
+        for (let i = 0; i < int16Data.length; i++) {
+          channelData[i] = int16Data[i] / 32768;
+        }
+        
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        
+        source.connect(audioContextRef.current.destination);
+        currentAudioSourceRef.current = source;
+        
+        source.onended = () => {
+          setIsPlayingAudio(false);
+          currentAudioSourceRef.current = null;
+        };
+
+        source.start(0);
+      } else {
+        setIsPlayingAudio(false);
+      }
+    } catch (err) {
+      console.error("[TTS Playback Error]", err);
+      setIsPlayingAudio(false);
+    }
+  };
   
   // GSAP individual card pulsing on reputation drift and shuffle tracking
   const prevRepsRef = useRef<Record<number, number>>({});
@@ -1499,8 +1601,7 @@ export default function App() {
       rec.onresult = (event: any) => {
         const text = event.results[0][0].transcript;
         if (text) {
-          setChatInput(text);
-          extractVoiceIntent(text);
+          handleSendPrompt(undefined, text);
         }
         setIsListeningMic(false);
         setMicRipplePulse(false);
@@ -1528,8 +1629,7 @@ export default function App() {
           "Switch view to Layer 0 Firewall shielding matrix"
         ];
         const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-        setChatInput(randomPhrase);
-        extractVoiceIntent(randomPhrase);
+        handleSendPrompt(undefined, randomPhrase);
         setIsListeningMic(false);
         setMicRipplePulse(false);
       }, 2500);
@@ -1537,11 +1637,11 @@ export default function App() {
   };
 
   // Chat request sender (Proxies to secure server /api/chat)
-  const handleSendPrompt = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || sendingChat) return;
+  const handleSendPrompt = async (e?: FormEvent, customText?: string) => {
+    if (e) e.preventDefault();
+    const userText = (customText || chatInput).trim();
+    if (!userText || sendingChat) return;
 
-    const userText = chatInput.trim();
     setChatInput("");
     setSendingChat(true);
     setChatError("");
@@ -1639,6 +1739,10 @@ export default function App() {
       };
 
       setMessages(prev => [...prev, modelMessage]);
+
+      if (voiceOutputEnabled) {
+        speakText(replyData.text, selectedRingIndex);
+      }
 
       // Seed a memory sequence automatically based on this event!
       handleAddMemory({
@@ -2150,6 +2254,51 @@ export default function App() {
                         </div>
                       )}
                       <Cpu className="w-4 h-4 text-slate-500" />
+                    </div>
+                  </div>
+
+                  {/* Voice Controls Header Strip */}
+                  <div className="px-4 py-2 bg-slate-950 border-b border-slate-900 flex items-center justify-between gap-4 font-mono select-none relative z-10">
+                    <div className="flex items-center gap-2">
+                      <Volume2 className={`w-3.5 h-3.5 transition-all duration-300 ${isPlayingAudio ? "text-purple-400 animate-bounce scale-110" : "text-slate-500"}`} />
+                      <span className="text-[10px] font-bold text-slate-400 tracking-wider">VOICE HUB</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2.5">
+                      {isPlayingAudio && (
+                        <div className="flex items-center gap-2 px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded-md text-[8px] font-bold text-purple-300">
+                          <span className="relative flex h-1.5 w-1.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500"></span>
+                          </span>
+                          <span>SPEAKING: {currentVoiceActor}</span>
+                          <button 
+                            type="button"
+                            onClick={stopSpeaking}
+                            className="ml-1 px-1 py-0.2 bg-purple-950/40 text-[7px] text-purple-400 hover:text-purple-200 border border-purple-500/30 rounded font-bold transition uppercase"
+                            title="Abort Audio"
+                          >
+                            STOP
+                          </button>
+                        </div>
+                      )}
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (voiceOutputEnabled) {
+                            stopSpeaking();
+                          }
+                          setVoiceOutputEnabled(!voiceOutputEnabled);
+                        }}
+                        className={`h-6 px-2.5 rounded-md border text-[9px] font-bold tracking-wider transition-all duration-300 ${
+                          voiceOutputEnabled 
+                            ? "bg-purple-950/20 border-purple-500/30 text-purple-300 hover:border-purple-400" 
+                            : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-400"
+                        }`}
+                      >
+                        {voiceOutputEnabled ? "VOICE FEEDBACK" : "VOICE MUTED"}
+                      </button>
                     </div>
                   </div>
 

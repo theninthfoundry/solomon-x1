@@ -206,6 +206,48 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// 1.5 API: Text-to-Speech proxy to Gemini 3.1 TTS Preview
+app.post("/api/tts", async (req, res) => {
+  if (!ai) {
+    return res.status(500).json({
+      error: "GEMINI_API_KEY is not configured in the host environment. Please add it to your Secrets panel."
+    });
+  }
+
+  const { text, voiceName } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: "No text specified for speech synthesis." });
+  }
+
+  const chosenVoice = voiceName || "Zephyr";
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-tts-preview",
+      contents: [{ parts: [{ text }] }],
+      config: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            // Prebuilt voices: 'Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'
+            prebuiltVoiceConfig: { voiceName: chosenVoice }
+          }
+        }
+      }
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) {
+      throw new Error("Empty audio response returned from Gemini TTS cortex.");
+    }
+
+    res.json({ audio: base64Audio });
+  } catch (err: any) {
+    console.error("[TTS API Error]", err);
+    res.status(500).json({ error: err.message || "Failed to synthesize speech." });
+  }
+});
+
 // 2. API: SECURE CHAT WITH ACTIVE REPAIR ARCHETYPE (uses Gemini responseSchema)
 app.post("/api/chat", async (req, res) => {
   if (!ai) {
