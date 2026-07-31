@@ -1352,6 +1352,17 @@ export default function ThreeCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const selectedIndexRef = useRef<number>(selectedRingIndex);
+  const sigilMorphRef = useRef<{
+    morphProgress: number;
+    sourceDetailType: string;
+    targetDetailType: string;
+    morphMesh: THREE.Mesh | null;
+  }>({
+    morphProgress: 1.0,
+    sourceDetailType: "crystalFacets",
+    targetDetailType: "crystalFacets",
+    morphMesh: null,
+  });
   const physicalRingsRef = useRef<any[]>([]);
 
   // HUD and Telemetry references for zero-allocation Direct DOM mutations at 60 FPS
@@ -1407,6 +1418,25 @@ export default function ThreeCanvas({
   useEffect(() => {
     selectedIndexRef.current = selectedRingIndex;
 
+    const activeAgent = agents.find(a => a.index === selectedRingIndex);
+    if (activeAgent && sigilMorphRef.current) {
+      const prevTarget = sigilMorphRef.current.targetDetailType;
+      const newTarget = activeAgent.detailType;
+      
+      if (prevTarget !== newTarget) {
+        sigilMorphRef.current.sourceDetailType = prevTarget;
+        sigilMorphRef.current.targetDetailType = newTarget;
+        sigilMorphRef.current.morphProgress = 0.0;
+        
+        gsap.to(sigilMorphRef.current, {
+          morphProgress: 1.0,
+          duration: 1.25,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
+      }
+    }
+
     if (physicalRingsRef.current.length > 0) {
       physicalRingsRef.current.forEach((pr) => {
         const isSelected = pr.index === selectedRingIndex;
@@ -1421,7 +1451,7 @@ export default function ThreeCanvas({
         });
       });
     }
-  }, [selectedRingIndex]);
+  }, [selectedRingIndex, agents]);
 
   // Global Escape key event listener to return to overview
   useEffect(() => {
@@ -1827,6 +1857,182 @@ export default function ThreeCanvas({
     });
     const starCoreMesh = new THREE.Mesh(starCoreGeo, starCoreMat);
     sigilGroup.add(starCoreMesh);
+
+    // ─── PART 6A-2: DYNAMIC MORPHING COGNITIVE SIGIL GEOMETRY ───
+    const baseSphereGeo = new THREE.SphereGeometry(2.2, 16, 16);
+    const posAttr = baseSphereGeo.attributes.position as THREE.BufferAttribute;
+    const vertexCount = posAttr.count;
+    const basePositions = new Float32Array(vertexCount * 3);
+    for (let i = 0; i < vertexCount; i++) {
+      basePositions[i * 3] = posAttr.getX(i);
+      basePositions[i * 3 + 1] = posAttr.getY(i);
+      basePositions[i * 3 + 2] = posAttr.getZ(i);
+    }
+    baseSphereGeo.dispose();
+
+    const getDetailTypePosition = (
+      x: number,
+      y: number,
+      z: number,
+      detailType: string,
+      outArr: Float32Array,
+      idx3: number
+    ) => {
+      let tx = x;
+      let ty = y;
+      let tz = z;
+
+      switch (detailType) {
+        case "crystalFacets": {
+          const sum = Math.abs(x) + Math.abs(y) + Math.abs(z);
+          const factor = sum > 0.001 ? 2.5 / sum : 1.0;
+          tx = x * factor;
+          ty = y * factor;
+          tz = z * factor;
+          break;
+        }
+        case "segmentedPlates": {
+          const maxVal = Math.max(Math.abs(x), Math.abs(y), Math.abs(z));
+          const factor = maxVal > 0.001 ? 2.2 / maxVal : 1.0;
+          tx = x * factor;
+          ty = y * factor;
+          tz = z * factor;
+          break;
+        }
+        case "hexNodes": {
+          const angle = Math.atan2(y, x);
+          const pi3 = Math.PI / 3;
+          const modAngle = ((angle % pi3) + pi3) % pi3;
+          const r = Math.cos(Math.PI / 6) / Math.cos(modAngle - Math.PI / 6);
+          const rad = 2.0;
+          tx = Math.cos(angle) * r * rad;
+          ty = Math.sin(angle) * r * rad;
+          tz = Math.max(-1.8, Math.min(1.8, z * 0.8));
+          break;
+        }
+        case "thorns": {
+          const h = 1.0 - (y / 2.2);
+          const r = Math.max(0.01, h * 0.55);
+          tx = x * r;
+          ty = y;
+          tz = z * r;
+          break;
+        }
+        case "crossStruts": {
+          if (Math.abs(x) > Math.abs(y)) {
+            tx = x * 1.4;
+            ty = y * 0.12;
+            tz = z * 0.12;
+          } else {
+            tx = x * 0.12;
+            ty = y * 1.4;
+            tz = z * 0.12;
+          }
+          break;
+        }
+        case "angularBrackets": {
+          tx = x;
+          ty = y + Math.abs(x) * 0.7;
+          tz = z * 0.35;
+          break;
+        }
+        case "woundCoils": {
+          const theta = Math.atan2(y, x);
+          const phi = Math.asin(Math.max(-1, Math.min(1, z / 2.2)));
+          const R = 1.6;
+          const r = 0.6;
+          tx = (R + r * Math.cos(phi)) * Math.cos(theta);
+          ty = (R + r * Math.cos(phi)) * Math.sin(theta);
+          tz = r * Math.sin(phi);
+          break;
+        }
+        case "ladderRungs": {
+          tx = x * 1.3;
+          tz = z * 0.25;
+          if (y > 0.7) {
+            ty = 1.3;
+          } else if (y < -0.7) {
+            ty = -1.3;
+          } else {
+            ty = 0.0;
+          }
+          break;
+        }
+        case "spiralWraps": {
+          const theta = Math.atan2(y, x);
+          const psi = 3.0 * theta;
+          const R = 1.5;
+          const r = 0.5;
+          tx = (R + r * Math.cos(psi)) * Math.cos(2.0 * theta);
+          ty = (R + r * Math.cos(psi)) * Math.sin(2.0 * theta);
+          tz = r * Math.sin(psi);
+          break;
+        }
+        case "nestedArcs": {
+          const theta = Math.atan2(y, x);
+          const R = (x * x + y * y) > (2.2 * 2.2 * 0.5) ? 2.2 : 1.1;
+          tx = R * Math.cos(theta);
+          ty = R * Math.sin(theta);
+          tz = z * 0.2;
+          break;
+        }
+        default: {
+          tx = x;
+          ty = y;
+          tz = z;
+          break;
+        }
+      }
+
+      outArr[idx3] = isNaN(tx) || !isFinite(tx) ? 0.0 : tx;
+      outArr[idx3 + 1] = isNaN(ty) || !isFinite(ty) ? 0.0 : ty;
+      outArr[idx3 + 2] = isNaN(tz) || !isFinite(tz) ? 0.0 : tz;
+    };
+
+    const morphingSigilGeo = new THREE.BufferGeometry();
+    const morphingSigilPositions = new Float32Array(vertexCount * 3);
+    morphingSigilGeo.setAttribute("position", new THREE.BufferAttribute(morphingSigilPositions, 3));
+    
+    // Seed initial geometry shape based on selected agent or fallback
+    const initAgent = agents.find(ag => ag.index === selectedRingIndex) || agents[0];
+    const initialDetailType = initAgent ? initAgent.detailType : "crystalFacets";
+    sigilMorphRef.current.sourceDetailType = initialDetailType;
+    sigilMorphRef.current.targetDetailType = initialDetailType;
+    sigilMorphRef.current.morphProgress = 1.0;
+
+    for (let i = 0; i < vertexCount; i++) {
+      const x = basePositions[i * 3];
+      const y = basePositions[i * 3 + 1];
+      const z = basePositions[i * 3 + 2];
+      getDetailTypePosition(x, y, z, initialDetailType, morphingSigilPositions, i);
+    }
+    morphingSigilGeo.attributes.position.needsUpdate = true;
+
+    const sphereTemp = new THREE.SphereGeometry(2.2, 16, 16);
+    if (sphereTemp.index) {
+      morphingSigilGeo.setIndex(new THREE.BufferAttribute(sphereTemp.index.array.slice(), 1));
+    }
+    sphereTemp.dispose();
+
+    morphingSigilGeo.computeVertexNormals();
+    preventNaNBoundingSphere(morphingSigilGeo, 10);
+
+    const morphingSigilMat = new THREE.MeshPhysicalMaterial({
+      color: initAgent ? new THREE.Color(initAgent.accentColor) : new THREE.Color(0xffaa00),
+      emissive: initAgent ? new THREE.Color(initAgent.accentColor) : new THREE.Color(0xff3300),
+      emissiveIntensity: 2.5,
+      roughness: 0.1,
+      metalness: 0.95,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.88,
+    });
+    
+    const morphingSigilMesh = new THREE.Mesh(morphingSigilGeo, morphingSigilMat);
+    sigilGroup.add(morphingSigilMesh);
+    sigilMorphRef.current.morphMesh = morphingSigilMesh;
 
     // Dynamic solar flare corona particles
     const coronaCount = 80;
@@ -3434,11 +3640,52 @@ export default function ThreeCanvas({
 
       // ─── DYNAMIC STELLAR PULSE ANIMATION (FOR MIN STAR CORE & CORONA) ───
       // Utilizing globally extracted agentConfidence, currentLatency, and stellarPulseFactor
+      const latencyPulseOffset = stellarPulseFactor * 0.18;
       
+      // Update 3D sigil geometry morph smoothly
+      if (sigilMorphRef.current && morphingSigilGeo) {
+        const morphInfo = sigilMorphRef.current;
+        const progress = morphInfo.morphProgress;
+        
+        const sourcePositions = new Float32Array(vertexCount * 3);
+        const targetPositions = new Float32Array(vertexCount * 3);
+        
+        for (let i = 0; i < vertexCount; i++) {
+          const vx = basePositions[i * 3];
+          const vy = basePositions[i * 3 + 1];
+          const vz = basePositions[i * 3 + 2];
+          getDetailTypePosition(vx, vy, vz, morphInfo.sourceDetailType, sourcePositions, i);
+          getDetailTypePosition(vx, vy, vz, morphInfo.targetDetailType, targetPositions, i);
+        }
+        
+        const livePositions = morphingSigilGeo.attributes.position.array as Float32Array;
+        for (let i = 0; i < vertexCount * 3; i++) {
+          livePositions[i] = THREE.MathUtils.lerp(sourcePositions[i], targetPositions[i], progress);
+        }
+        morphingSigilGeo.attributes.position.needsUpdate = true;
+        morphingSigilGeo.computeVertexNormals();
+        morphingSigilGeo.computeBoundingSphere();
+        morphingSigilGeo.computeBoundingBox();
+
+        if (morphInfo.morphMesh) {
+          // Slow rotation of the morphing sigil mesh
+          morphInfo.morphMesh.rotation.y += delta * 0.45 * autoRotSpeed;
+          morphInfo.morphMesh.rotation.x += delta * 0.25 * autoRotSpeed;
+          morphInfo.morphMesh.scale.setScalar(1.0 + latencyPulseOffset * 0.35);
+
+          const activeAgent = activeIdx !== -1 ? agentsRef.current.find(a => a.index === activeIdx) : undefined;
+          if (activeAgent) {
+            const agentAccentColor = new THREE.Color(activeAgent.accentColor);
+            const mat = morphInfo.morphMesh.material as THREE.MeshPhysicalMaterial;
+            mat.color.lerp(agentAccentColor, 0.1);
+            mat.emissive.lerp(agentAccentColor, 0.1);
+          }
+        }
+      }
+
       // Animate core geodesic miniature star scale & rotation
       // Core star glows brighter and scales larger when confidence is higher
       const baseStarScale = 1.0 + (agentConfidence * 0.45); 
-      const latencyPulseOffset = stellarPulseFactor * 0.18;
       const finalStarScale = baseStarScale + latencyPulseOffset;
       
       starCoreMesh.scale.setScalar(finalStarScale);

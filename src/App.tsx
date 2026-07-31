@@ -1419,6 +1419,49 @@ export default function App() {
     setTelemetryData(newData);
   };
 
+  // Automatically log 'Deep Focus' session summaries when cognitive load remains stable (variance <= 6) for over 15 minutes
+  const lastLoggedFocusSessionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (telemetryData.length < 4) return;
+
+    // Check last 4 data points (covering 15 minutes)
+    const lastFour = telemetryData.slice(-4);
+    const loads = lastFour.map((p) => p.cognitiveLoad);
+    const minLoad = Math.min(...loads);
+    const maxLoad = Math.max(...loads);
+    const avgLoad = Math.round(loads.reduce((a, b) => a + b, 0) / loads.length);
+    const variance = maxLoad - minLoad;
+
+    // Stable if maximum change is 6% or less
+    const isStable = variance <= 6;
+
+    if (isStable) {
+      // Create a unique key of the current stable window to prevent duplicate logging
+      const sessionKey = lastFour.map((p) => `${p.timeIndex}_${p.cognitiveLoad}`).join(",");
+      if (lastLoggedFocusSessionRef.current !== sessionKey) {
+        lastLoggedFocusSessionRef.current = sessionKey;
+
+        // Automatically log "Deep Focus" session summary to MemoryCortex as L3_Episodic memory
+        handleAddMemory({
+          horizon: "L3_Episodic",
+          summary: `Deep Focus Session: Systemic Cognitive Stability (${avgLoad}% Load)`,
+          detailedContent: `Automated detection of sustained mental stamina and cognitive stability over a 15-minute observation window. Measured cognitive load remained exceptionally steady with an average of ${avgLoad}% and a negligible variance of ±${variance}%. Optimal synchronization achieved with the active agent enclave. Dispatched episodic record.`,
+          category: "Deep Focus",
+          tags: ["deep_focus", "cognitive_stability", "episodic_summary", "flow_state"]
+        });
+
+        // Add a corresponding Audit Log entry
+        handleAddAuditLog({
+          actor: "Cognitive Twin",
+          action: "DEEP_FOCUS_STABILITY_DETECTED",
+          status: "AUTHORIZED",
+          details: `Automated 'Deep Focus' session logged to L3_Episodic memory cortex. Load average: ${avgLoad}%, variance: ${variance}%.`
+        });
+      }
+    }
+  }, [telemetryData]);
+
   // Sentiment mood analysis helper based on user input
   const analyzeVoiceSentiment = (text: string): 'warm' | 'cold' | 'neutral' => {
     const cleaned = text.toLowerCase();
