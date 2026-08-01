@@ -4395,72 +4395,123 @@ export default function ThreeCanvas({
 
             if (pr.index === 0) {
               // 1. Ars Almadel: Rigid firewall shielding pulsations
-              const breathe = 1.0 + 0.15 * Math.sin(motionTime * 5.0 + i * 0.4) * intensityFactor;
+              const breathe = isSelected 
+                ? (1.0 + 0.35 * Math.sin(motionTime * 8.0 + i * 0.6) * intensityFactor)
+                : (1.0 + 0.15 * Math.sin(motionTime * 5.0 + i * 0.4) * intensityFactor);
               nodeGroup.position.set(
                 Math.cos(nodeAngle) * baseRad * breathe,
                 Math.sin(nodeAngle) * baseRad * breathe,
-                0
+                isSelected ? Math.sin(motionTime * 6.0 + i * 0.5) * 1.5 : 0
               );
               nodeGroup.scale.setScalar((1.0 + 0.12 * Math.sin(motionTime * 5.0 + i * 0.4) * intensityFactor) * selectScaleBoost);
             } else if (pr.index === 1) {
               // 2. Ars Notoria: Sequential cascaded indexing register scans
               const phase = motionTime * 2.5 + i * (Math.PI / 4);
               nodeGroup.rotation.y = phase;
-              nodeGroup.scale.setScalar((0.9 + 0.22 * Math.sin(phase) * intensityFactor) * selectScaleBoost);
+              
+              if (isSelected) {
+                // EXTREME SPECTACULAR 3D SCANNER SPIRAL HELIX ANIMATION FOR SELECTION
+                const radialBreathe = 1.0 + 0.42 * Math.sin(motionTime * 7.0 + i * 0.8) * intensityFactor;
+                const helicalZ = Math.cos(motionTime * 5.5 + i * 1.5) * 2.8 * intensityFactor;
+                nodeGroup.position.set(
+                  Math.cos(nodeAngle) * baseRad * radialBreathe,
+                  Math.sin(nodeAngle) * baseRad * radialBreathe,
+                  helicalZ
+                );
+                nodeGroup.rotation.z = nodeAngle + motionTime * 4.0;
+                nodeGroup.scale.setScalar((1.1 + 0.45 * Math.sin(phase * 1.8) * intensityFactor) * selectScaleBoost);
+              } else {
+                nodeGroup.position.set(
+                  Math.cos(nodeAngle) * baseRad,
+                  Math.sin(nodeAngle) * baseRad,
+                  0
+                );
+                nodeGroup.rotation.z = nodeAngle;
+                nodeGroup.scale.setScalar((0.9 + 0.22 * Math.sin(phase) * intensityFactor) * selectScaleBoost);
+              }
             } else if (pr.index === 2) {
               // 3. Ars Paulina: Chaotic quantum skepticism fluctuations
               const fluctuation = Math.sin(motionTime * 7.5 + i * 1.3) * Math.cos(motionTime * 3.2 - i * 0.7);
               nodeGroup.scale.setScalar((1.0 + 0.3 * fluctuation * intensityFactor) * selectScaleBoost);
+              const paulinaRad = isSelected ? (baseRad + fluctuation * 2.2 * intensityFactor) : (baseRad + fluctuation * 0.9 * intensityFactor);
               nodeGroup.position.set(
-                Math.cos(nodeAngle) * (baseRad + fluctuation * 0.9 * intensityFactor),
-                Math.sin(nodeAngle) * (baseRad + fluctuation * 0.9 * intensityFactor),
-                fluctuation * 0.7 * intensityFactor
+                Math.cos(nodeAngle) * paulinaRad,
+                Math.sin(nodeAngle) * paulinaRad,
+                fluctuation * (isSelected ? 2.5 : 0.7) * intensityFactor
               );
             } else if (pr.index === 3) {
               // 4. Ars Goetia: Rapid sandboxed compute loop execution
-              nodeGroup.rotation.z = nodeAngle + motionTime * 5.0;
+              const spinSpeed = isSelected ? 12.0 : 5.0;
+              nodeGroup.rotation.z = nodeAngle + motionTime * spinSpeed;
               nodeGroup.scale.setScalar((0.85 + 0.25 * Math.sin(motionTime * 11.0 + i) * intensityFactor) * selectScaleBoost);
+              const goetiaZ = isSelected ? Math.sin(motionTime * 8.0 + i) * 1.8 * intensityFactor : 0;
+              nodeGroup.position.set(
+                Math.cos(nodeAngle) * baseRad,
+                Math.sin(nodeAngle) * baseRad,
+                goetiaZ
+              );
             } else if (pr.index === 4) {
               // 5. Ars Theurgia: Harmonic multidimensional reality graphing
               nodeGroup.rotation.x = motionTime * 0.618 + i;
               nodeGroup.rotation.y = motionTime * 1.0 + i * 0.5;
               nodeGroup.rotation.z = nodeAngle + motionTime * 0.382;
               nodeGroup.scale.setScalar((1.0 + 0.15 * Math.sin(motionTime * 3.0 + i) * intensityFactor) * selectScaleBoost);
+              
+              const theurgiaX = isSelected ? Math.sin(motionTime * 2.5 + i) * 2.5 : 0;
+              const theurgiaY = isSelected ? Math.cos(motionTime * 2.5 + i) * 2.5 : 0;
+              nodeGroup.position.set(
+                Math.cos(nodeAngle) * baseRad + theurgiaX,
+                Math.sin(nodeAngle) * baseRad + theurgiaY,
+                isSelected ? Math.sin(motionTime * 4.0 + i) * 1.8 : 0
+              );
             } else if (pr.index === 5) {
               // 6. Ars Almiras: Biometric focus telemetry wave shifts
-              const telWave = Math.sin(motionTime * 4.2 + i * Math.PI / 2);
+              const telWave = Math.sin(motionTime * (isSelected ? 8.5 : 4.2) + i * Math.PI / 2);
               nodeGroup.position.set(
-                Math.cos(nodeAngle) * (baseRad + telWave * 1.4 * intensityFactor),
-                Math.sin(nodeAngle) * (baseRad + telWave * 1.4 * intensityFactor),
-                0
+                Math.cos(nodeAngle) * (baseRad + telWave * (isSelected ? 3.5 : 1.4) * intensityFactor),
+                Math.sin(nodeAngle) * (baseRad + telWave * (isSelected ? 3.5 : 1.4) * intensityFactor),
+                isSelected ? Math.cos(motionTime * 6.0 + i) * 1.5 : 0
               );
               nodeGroup.scale.setScalar((0.95 + 0.2 * telWave * intensityFactor) * selectScaleBoost);
             } else if (pr.index === 6) {
               // 7. Ars Verum: Secure, majestic, absolute authorization gates
-              const authPulse = Math.sin(motionTime * 1.8 + i * Math.PI / 4);
+              const authPulse = Math.sin(motionTime * (isSelected ? 4.5 : 1.8) + i * Math.PI / 4);
               nodeGroup.scale.setScalar((1.0 + 0.2 * authPulse * (intensityFactor * 2.0)) * selectScaleBoost);
               nodeGroup.rotation.x = authPulse * 0.4 * intensityFactor;
+              
+              nodeGroup.position.set(
+                Math.cos(nodeAngle) * (baseRad + (isSelected ? authPulse * 2.2 : 0)),
+                Math.sin(nodeAngle) * (baseRad + (isSelected ? authPulse * 2.2 : 0)),
+                isSelected ? authPulse * 3.5 : 0
+              );
             } else if (pr.index === 7) {
               // 8. Ars Ephesia: Jittery high-frequency compaction shards
-              const jitter = Math.sin(motionTime * 22.0 + i) > 0.92 ? (Math.random() - 0.5) * 0.25 * intensityFactor : 0;
+              const jitter = Math.sin(motionTime * (isSelected ? 45.0 : 22.0) + i) > 0.92 
+                ? (Math.random() - 0.5) * (isSelected ? 1.5 : 0.25) * intensityFactor 
+                : 0;
               nodeGroup.position.set(
                 Math.cos(nodeAngle) * baseRad + jitter,
                 Math.sin(nodeAngle) * baseRad + jitter,
                 jitter
               );
-              nodeGroup.rotation.z = nodeAngle + motionTime * 1.8 + (Math.sin(motionTime * 14.0) * 0.15 * intensityFactor);
+              nodeGroup.rotation.z = nodeAngle + motionTime * (isSelected ? 5.0 : 1.8) + (Math.sin(motionTime * 14.0) * 0.15 * intensityFactor);
             } else if (pr.index === 8) {
               // 9. Ars Fulcanelli: Chronological interlocking counter-rotations
               const dir = (i % 2 === 0 ? 1 : -1);
-              nodeGroup.rotation.y = dir * motionTime * 3.2;
+              nodeGroup.rotation.y = dir * motionTime * (isSelected ? 8.5 : 3.2);
               nodeGroup.scale.setScalar((0.95 + 0.15 * Math.sin(motionTime * 2.8 + i) * intensityFactor) * selectScaleBoost);
+              nodeGroup.position.set(
+                Math.cos(nodeAngle) * baseRad,
+                Math.sin(nodeAngle) * baseRad,
+                isSelected ? Math.sin(motionTime * 4.5 + i * Math.PI) * 2.2 : 0
+              );
             } else {
               // 10. Ars Regalis: Senate balance economy iris expansion
-              const iris = Math.sin(motionTime * 2.0 + (i % 2) * Math.PI);
+              const iris = Math.sin(motionTime * (isSelected ? 5.0 : 2.0) + (i % 2) * Math.PI);
               nodeGroup.position.set(
-                Math.cos(nodeAngle) * (baseRad + iris * 1.1 * intensityFactor),
-                Math.sin(nodeAngle) * (baseRad + iris * 1.1 * intensityFactor),
-                0
+                Math.cos(nodeAngle) * (baseRad + iris * (isSelected ? 3.0 : 1.1) * intensityFactor),
+                Math.sin(nodeAngle) * (baseRad + iris * (isSelected ? 3.0 : 1.1) * intensityFactor),
+                isSelected ? Math.cos(motionTime * 5.0 + i) * 1.8 : 0
               );
               nodeGroup.scale.setScalar((1.0 + 0.15 * iris * intensityFactor) * selectScaleBoost);
             }

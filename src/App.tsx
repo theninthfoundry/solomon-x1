@@ -586,6 +586,27 @@ export default function App() {
     setIsCinematicFading(true);
     setTimeout(() => {
       setSelectedRingIndex(idx);
+      
+      // Auto-switch to the specified and assigned application UI for the ring
+      if (idx !== -1) {
+        const tabMapping: Record<number, 'presence' | 'directives' | 'economy' | 'firewall' | 'memory' | 'evolution' | 'trust' | 'twin' | 'alerts'> = {
+          0: 'firewall',   // Ars Almadel
+          1: 'memory',     // Ars Notoria
+          2: 'trust',      // Ars Paulina
+          3: 'directives', // Ars Goetia
+          4: 'evolution',  // Ars Theurgia
+          5: 'twin',       // Ars Almiras
+          6: 'evolution',  // Ars Verum
+          7: 'memory',     // Ars Ephesia
+          8: 'trust',      // Ars Fulcanelli
+          9: 'economy'     // Ars Regalis
+        };
+        const targetTab = tabMapping[idx];
+        if (targetTab) {
+          setActiveTab(targetTab);
+        }
+      }
+
       // Log Ring merge change safely
       if (idx !== -1 && INITIAL_AGENTS[idx]) {
         handleAddAuditLog({
@@ -2728,6 +2749,7 @@ export default function App() {
             <MemoryCortex 
               memoryItems={memoryItems}
               onAddMemory={handleAddMemory}
+              activeAgentIndex={selectedRingIndex}
             />
           )}
 

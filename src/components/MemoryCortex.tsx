@@ -19,9 +19,10 @@ import {
 interface MemoryCortexProps {
   memoryItems: MemoryItem[];
   onAddMemory: (newItem: Omit<MemoryItem, "id" | "timestamp">) => void;
+  activeAgentIndex?: number;
 }
 
-export default function MemoryCortex({ memoryItems, onAddMemory }: MemoryCortexProps) {
+export default function MemoryCortex({ memoryItems, onAddMemory, activeAgentIndex }: MemoryCortexProps) {
   const [subModule, setSubModule] = useState<"cortex" | "dream" | "gravity">("cortex");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -268,6 +269,71 @@ export default function MemoryCortex({ memoryItems, onAddMemory }: MemoryCortexP
   return (
     <div className="space-y-6 font-mono text-slate-300">
       
+      {activeAgentIndex === 1 && (
+        <div id="ars-notoria-banner" className="bg-gradient-to-r from-blue-950/45 via-purple-950/35 to-slate-950/70 border border-blue-500/30 rounded-2xl p-5 shadow-2xl relative overflow-hidden animate-fadeIn">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Brain className="w-32 h-32 text-blue-400 animate-pulse" />
+          </div>
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                </span>
+                <span className="text-[10px] tracking-widest font-bold text-blue-400 uppercase">ARS NOTORIA ALIGNED</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-400" />
+                Active Memory Scribe & Indexer
+              </h3>
+              <p className="text-xs text-slate-400 max-w-2xl font-sans">
+                Ars Notoria is currently synchronizing real-time temporal memories. Compact decayed shards, forecast cognitive drift, and oversee goal-gravity vectors with zero latency.
+              </p>
+            </div>
+            
+            {/* Visual Mini Metrics Grid */}
+            <div className="grid grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-[10px] min-w-[200px]">
+              <div>
+                <span className="text-slate-500 block uppercase">SYNC RATE</span>
+                <span className="font-bold text-blue-300">92.1 GB/s</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block uppercase">INTEGRITY</span>
+                <span className="font-bold text-emerald-400">99.98%</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block uppercase">DECAY BUF</span>
+                <span className="font-bold text-purple-300">SECURE</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block uppercase">REPUTATION</span>
+                <span className="font-bold text-amber-400">92.1%</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Digital Scanning wave animation */}
+          <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-3 text-[10px]">
+            <div className="flex items-center gap-4 text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                INDEXING ENGINE: ACTIVE
+              </span>
+              <span>VECTOR DIMENSIONS: 1,536 (L1-L9)</span>
+            </div>
+            <button 
+              onClick={runDreamCondense}
+              disabled={activeDreamSequence}
+              className={`h-7 px-4 rounded-lg bg-blue-600/20 hover:bg-blue-600/35 border border-blue-500/35 text-[9px] font-bold text-blue-300 flex items-center gap-1.5 transition active:scale-95 ${activeDreamSequence ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <RotateCw className={`w-3 h-3 ${activeDreamSequence ? 'animate-spin' : ''}`} />
+              FORCE COGNITIVE RE-INDEX
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* SECTION TABS SUB-HEADER */}
       <div id="memory-cortex-subnavigation" className="flex flex-wrap items-center gap-2 bg-slate-900/30 p-2 border border-slate-850 rounded-xl justify-center md:justify-start">
         <button 
