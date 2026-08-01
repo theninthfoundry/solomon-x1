@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { TelemetryPoint } from "../types";
 import { ResponsiveContainer, LineChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Activity, Zap, Play, Eye, Flame, ShieldAlert, Cpu } from "lucide-react";
+import D3CognitiveChart from "./D3CognitiveChart";
 
 const COGNITIVE_AGENTS = [
   { id: 0, name: "Ars Almadel", role: "Firewall", baseLatency: 800 },
@@ -560,6 +561,9 @@ export default function StateTracker({
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Real-time D3 Line Chart */}
+        <D3CognitiveChart telemetryData={telemetryData} />
 
         {/* Dynamic Gemini API Latency Heatmap Grid */}
         <div id="latency-heatmap-panel" className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
